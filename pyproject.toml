@@ -1,0 +1,96 @@
+[project]
+name = "processorplugins"
+version = "0.0.0"
+requires-python = ">=3.9, ~=3.12"
+
+[tool.ruff]
+# Allow lines to be as long as 120.
+line-length = 120
+# Exclude a variety of commonly ignored directories.
+# These are in addition to the default values
+extend-exclude = [
+    "env",
+    "*.md",
+    "__pycache__",
+    "requirements.*",
+    ".gitignore",
+    ".gitlab-ci*",
+    "tests",
+    "tools",
+    "libs",
+    "installer",
+    "*.txt",
+    "3rd_party_licenses",
+]
+
+[tool.ruff.lint]
+# Skip unused variable rules
+extend-select = [
+    'E',      # includes all E rules
+    'W',      # includes all W rules
+    #'C90',    # function complexity
+    'I001',   # unsorted imports
+    'N',      # includes all naming rules
+    'YTT',    # includes all version comparison rules
+    'ANN',    # includes all python annotations rules
+    "SLF001", # checks for private method usage
+    "S108",   # hardcoded temp file
+    "S110", "S112",   # try-except-pass/try-except-continue
+    "S306",   # avoid temp.mktemp
+    # "S602", "S604",   # avoid shell usage
+    "S607",   # avoid partial path on process
+    # "BLE001", # blind exception
+    "B002",   # unary operator
+    "B003",   # assignment to environ
+    "B007",   # unused loop variable
+    "B008",   # function call in default arg
+    "B009", "B010",   # getattr/setattr with constant
+    "B014",   # duplicate exception handler
+    "B015", "B018",   # useless comparison/expression
+    "B016",   # raise literal
+    "B019",   # cached methods
+    "B020",   # loop overrides iterator
+    "B025",   # duplicate exception block
+    "B026",   # star arg after keyword
+    "B027",   # empty non-abstract method
+    "B029",   # except with empty tuple
+    "B030",   # except with non-exception
+    "B032",   # unintentional type annotations
+    "B904",   # raise without from inside except
+    # "B905",   # zip without explicit strict - Disabled, needs Python 3.10 minimum
+]
+ignore = [
+    "E402",   # Module level import not at top of file
+    "N802",   # Invalid function name - we don't use snake_case
+    "ANN101",
+    "ANN102", # Ignore slf/cls type annotations
+    "ANN204", # Ignore return type annotations for __init__
+    "ANN401", # Disable disallowing for 'Any' type annotation
+]
+
+[tool.ruff.extend-per-file-ignores]
+# ignore certain rules in specific files.
+"rpdp_path.py" = ["N805"]    # self as first arg
+"rpdp.py" = [
+    "F401", # imported but unused
+    "I001" # import unsorted
+]
+"rpdp_max.py" = [
+    "F401", # imported but unused
+    "I001" # import unsorted
+]
+
+[tool.ruff.lint.flake8-annotations]
+suppress-none-returning = true
+
+[tool.codespell]
+# words to be ignored when spell checking
+ignore-words-list = "lod"
+write-changes = true
+
+[tool.poetry]
+name = "rpdp"
+version = "0.0.0"
+description = "RapidPipeline by DGG - 3D Processor DCC Plugins"
+authors = ["João Silva <joao@dgg.com>"]
+readme = "README.md"

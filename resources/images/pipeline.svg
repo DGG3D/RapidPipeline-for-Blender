@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Warstwa_1" data-name="Warstwa 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1080 1080">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: url(#Gradient_bez_nazwy_8);
+        fill-rule: evenodd;
+        stroke-width: 0px;
+      }
+    </style>
+    <linearGradient id="Gradient_bez_nazwy_8" data-name="Gradient bez nazwy 8" x1="983.19" y1="-1953.52" x2="115.45" y2="-1688.47" gradientTransform="translate(0 -1264.04) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset=".58" stop-color="#22cb83"/>
+      <stop offset=".76" stop-color="#22cb83" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <path class="cls-1" d="M569.49,401.24c9.58-32.1,39.06-54.05,72.53-54.05h100.1c35.56,0,60.99,34.37,50.65,68.38l-10.39,34.23c-7.62,25.1-30.77,42.26-56.99,42.26-69.31,0-114.54,72.81-83.87,135.01l85.47,162.38h78.41l-100.81-193.5c-7.6-15.44,3.62-33.53,20.83-33.53,57.18,0,107.61-37.42,124.24-92.14l10.39-34.23c24.07-79.22-35.18-159.23-117.93-159.23h-100.1c-64.54,0-121.43,42.4-139.91,104.27l-88.02,294.72c-9.58,32.08-39.06,54.06-72.53,54.06h-114.66l-9.82,70.35h124.46c64.54,0,121.43-42.4,139.9-104.27l88.02-294.72.02.02Z"/>
+</svg>

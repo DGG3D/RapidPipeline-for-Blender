@@ -1,0 +1,34 @@
+{
+    "hideSettings": [
+        "import:usd",
+        "import:cad"
+    ],
+    "overrideUIElement": {
+        "PopupOverrideElement": [
+            "texRes_gltf",
+            "texRes_usdAsm",
+            "texRes_usdUsp",
+            "texRes_objMtl",
+            "texRes_fbxPhyMat",
+            "texFormat_usdAsm",
+            "texFormat_usdUsp",
+            "texFormat_objMtl",
+            "texFormat_fbxPhyMat",
+            "texFormat_gltf",
+            "bakingResolutions",
+            "dropTexturesReplacer",
+            "dropTexturesKeepMat"
+        ],
+        "TabElement":[
+            "3dProcessor"
+        ],
+        "SimpleContainer":[
+            "import",
+            "3dEdit",
+            "meshCulling",
+            "optimize",
+            "sceneGraphFlattening",
+            "outcomeModifier"
+        ]
+    }
+}

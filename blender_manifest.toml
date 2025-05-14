@@ -1,0 +1,19 @@
+schema_version = "1.0.0"
+
+id = "processor_plugins"
+name = "RapidPipeline_for_Blender"
+version = "0.2.1_1"
+
+blender_version_min = "4.2.0"
+type = "add-on"
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+copyright = [
+  "Copyright 2025, Darmstadt Graphics Group GmbH",
+]
+
+maintainer = "Darmstadt Graphics Group GmbH"
+tagline = "Optimize and process 3D models interactively and 100% locally"
+tags = ["Geometry", "Optimizer", "Decimation", "Remeshing"]
+website = "https://docs.rapidpipeline.com/docs/3dProcessor-Tutorials/blender-plugin-tutorials"

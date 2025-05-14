@@ -1,0 +1,24 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="icons">
+        <file>3dEdit.svg</file>
+        <file>exportArray.svg</file>
+        <file>help.svg</file>
+        <file>import.svg</file>
+        <file>info.svg</file>
+        <file>load.svg</file>
+        <file>meshCulling.svg</file>
+        <file>optimize.svg</file>
+        <file>outcomeModifier.svg</file>
+        <file>restore.svg</file>
+        <file>github.svg</file>
+        <file>run.svg</file>
+        <file>save.svg</file>
+        <file>sceneGraphFlattening.svg</file>
+    </qresource>
+    <qresource prefix="logos">
+        <file>logo_white.svg</file>
+        <file>logo_black.svg</file>
+        <file>pipeline.svg</file>
+    </qresource>
+</RCC>

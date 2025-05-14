@@ -1,0 +1,298 @@
+{
+  "import": {
+    "general": {
+      "rotateZUp": true,
+      "fixAnimationData": true,
+      "normalmapYFlip": false
+    },
+    "USD": {
+      "profile": "generic",
+      "purpose": "string8308"
+    },
+    "CAD": {
+      "tessellationResolution": "coarse",
+      "maxTessellationDeviation": 54.18713847260984,
+      "maxTessellationDeviationAngle": 121.99294447549097,
+      "maxTesselationEdgeLength": 1.212952122613426e+308
+    },
+    "discard": {
+      "cameras": false,
+      "lights": true,
+      "animations": false,
+      "morphTargets": true,
+      "unusedUVs": false
+    }
+  },
+  "sceneGraphFlattening": {
+    "method": "byMaterial",
+    "preservedSceneDepth": 27,
+    "splitMode": "byMaterial",
+    "nodeNamingScript": "string9897"
+  },
+  "3dEdit": {
+    "meshNormals": {
+      "recomputeInputNormals": true,
+      "hardAngleThreshold": 74.48521307184087,
+      "computationMethod": "angle"
+    },
+    "modelEdit": {
+      "scalingFactor": 1.603752509678976e+308,
+      "centerModel": true
+    },
+    "materialEdit": {
+      "materialReplacer": {
+        "defaultMaterial": {
+          "generateUVs": {
+            "uvAtlasGenerator": {
+              "addCheckerTexture": {},
+              "method": "forwardBijective",
+              "segmentationCutAngle": 106.13077484940412,
+              "segmentationChartAngle": 124.45340100225391,
+              "maxAngleError": 7868.038643331931,
+              "maxPrimitivesPerChart": 3,
+              "cutOverlappingPieces": false,
+              "atlasMode": "single",
+              "allowRectangularAtlases": false,
+              "packingResolution": 13316,
+              "packingPixelDistance": 10445
+            }
+          },
+          "baseColor": [
+            0.6363770684694025,
+            0.2926405531487125,
+            0.37724198106417606,
+            0.6844695875480608
+          ],
+          "metallic": 0.45548462952770175,
+          "roughness": 0.32583756953056864
+        }
+      },
+      "alphaBlendToMaskThreshold": 0.022240928438889362,
+      "alphaMapToOpaqueThreshold": 0.24885320636953312
+    }
+  },
+  "meshCulling": {
+    "occlusionCulling": {
+      "perMesh": false,
+      "quality": "fast",
+      "ignoreTransparency": true,
+      "runAfterDecimator": true,
+      "diffusion": "none"
+    },
+    "smallFeatureCulling": {
+      "sizeThreshold": {
+        "value": 93.0890475547489
+      },
+      "runAfterDecimator": true
+    }
+  },
+  "optimize": {
+    "3dModelOptimizationMethod": {
+      "onlyMaterial": {
+        "materialUVAggregator": {
+          "dropTextures": {
+            "default": 0.9760718508202175,
+            "baseColor": 0.20064983911596124,
+            "normal": 0.3649096296501615,
+            "emissive": 0.5840965261378701,
+            "metallic": 0.5260435762450159,
+            "roughness": 0.6628033132809614,
+            "occlusion": 0.2522555687327588,
+            "displacement": 0.5008542351185766,
+            "clearcoat": 0.9170194069780498,
+            "clearcoatRoughness": 0.10602747837891424,
+            "clearcoatNormal": 0.8617297683061735,
+            "transmission": 0.5599036421358388,
+            "sheenColor": 0.4027984265284188,
+            "sheenRoughness": 0.27822057616660234,
+            "specularColor": 0.1485265111586398,
+            "specularValue": 0.9545692750312079,
+            "thickness": 0.9263827584558108,
+            "iridescence": 0.861116317106266,
+            "iridescenceThickness": 0.8006788738669057
+          },
+          "atlasGenerator2ndUV": {
+            "textureBaker2ndUV": {
+              "bakingResolution2ndUV": {
+                "default": 14926
+              },
+              "aoBaker2ndUV": {
+                "strength": 0.5233950815091643,
+                "replaceOriginal": false,
+                "filterRadius": 0.7095485812417923,
+                "textureSamples": 12,
+                "useDistance": true
+              },
+              "sampleCount": 2,
+              "texMapAutoScaling": true,
+              "bakeCombinedScene": false,
+              "powerOfTwoResolution": "none",
+              "inpaintingRadius": 8.322699544177414,
+              "maxCageDistance": 0.3430505032475848
+            },
+            "method": "fastConformal",
+            "segmentationCutAngle": 20.648460384511353,
+            "segmentationChartAngle": 163.55007681712448,
+            "maxAngleError": 13272.791752729296,
+            "maxPrimitivesPerChart": 98,
+            "cutOverlappingPieces": false,
+            "atlasMode": "separateNormals",
+            "allowRectangularAtlases": true,
+            "packingResolution": 10565,
+            "packingPixelDistance": 7717,
+            "atlasFactor": 14
+          },
+          "allowRectangularAtlases": true,
+          "forceNormalRebaking": false
+        }
+      }
+    },
+    "animationOptimization": {
+      "simplification": "conservative"
+    }
+  },
+  "modifier": {
+    "filesize": {
+      "maxMegabytesOnDisk": 17.24419537550348
+    }
+  },
+  "export": [
+    {
+      "fileName": "",
+      "preserveTextureFilenames": false,
+      "textureMapFilePrefix": "",
+      "reencodeTextures": "auto",
+      "textureNamingScript": "string4146",
+      "optimizeFaceOrder": true,
+      "discard": {
+        "unusedUVs": true
+      },
+      "format": {
+        "usdz": {
+          "usdPreviewSurface": {
+            "textureCompression": {
+              "jpeg": {
+                "quality": 49,
+                "qualityNormals": 44
+              },
+              "webp": {
+                "quality": 33,
+                "qualityNormals": 97
+              },
+              "ktx": {
+                "compressionSpeed": 4,
+                "quality": 146,
+                "uastcQuality": "high",
+                "mipmapCount": 198108449
+              }
+            },
+            "textureFormat": {
+              "default": "png",
+              "diffuseColor": "ktx-basis-etc1s",
+              "opacity": "png",
+              "metallic": "webp",
+              "roughness": "jpg",
+              "emissiveColor": "webp",
+              "normal": "png",
+              "occlusion": "auto",
+              "clearcoat": "png",
+              "clearcoatRoughness": "auto",
+              "displacement": "jpg"
+            },
+            "maxTextureResolution": {
+              "default": 16357,
+              "diffuseColor": 13596,
+              "opacity": 1340,
+              "metallic": 15291,
+              "roughness": 16108,
+              "emissiveColor": 7937,
+              "normal": 10894,
+              "occlusion": 2294,
+              "clearcoat": 11882,
+              "clearcoatRoughness": 11366,
+              "displacement": 11869
+            }
+          },
+          "adobeStandardMaterial": {
+            "textureCompression": {
+              "jpeg": {
+                "quality": 84,
+                "qualityNormals": 82
+              },
+              "webp": {
+                "quality": 61,
+                "qualityNormals": 71
+              },
+              "ktx": {
+                "compressionSpeed": 0,
+                "quality": 72,
+                "uastcQuality": "high+compressed",
+                "mipmapCount": 939104974
+              }
+            },
+            "textureFormat": {
+              "default": "ktx-basis-uastc",
+              "baseColor": "png",
+              "opacity": "ktx-basis-uastc",
+              "roughness": "ktx-basis-uastc",
+              "metallic": "webp",
+              "specularLevel": "jpg",
+              "specularEdgeColor": "png8",
+              "normal": "ktx-basis-etc1s",
+              "height": "png",
+              "anisotropyLevel": "webp",
+              "anisotropyAngle": "png",
+              "emissive": "png",
+              "sheenOpacity": "png8",
+              "sheenColor": "png",
+              "sheenRoughness": "auto",
+              "translucency": "webp",
+              "absorptionColor": "auto",
+              "scatteringColor": "auto",
+              "scatteringDistanceScale": "webp",
+              "coatOpacity": "png8",
+              "coatColor": "ktx-basis-etc1s",
+              "coatRoughness": "jpg",
+              "coatSpecularLevel": "ktx-basis-uastc",
+              "coatNormal": "png8",
+              "ambientOcclusion": "ktx-basis-etc1s",
+              "volumeThickness": "jpg"
+            },
+            "maxTextureResolution": {
+              "default": 14627,
+              "baseColor": 10399,
+              "opacity": 15956,
+              "roughness": 13652,
+              "metallic": 7358,
+              "specularLevel": 6365,
+              "specularEdgeColor": 16175,
+              "normal": 9755,
+              "height": 16117,
+              "anisotropyLevel": 10671,
+              "anisotropyAngle": 1530,
+              "emissive": 8563,
+              "sheenOpacity": 13539,
+              "sheenColor": 14834,
+              "sheenRoughness": 14933,
+              "translucency": 14660,
+              "absorptionColor": 1949,
+              "scatteringColor": 11916,
+              "scatteringDistanceScale": 7934,
+              "coatOpacity": 14804,
+              "coatColor": 12638,
+              "coatRoughness": 9999,
+              "coatSpecularLevel": 11438,
+              "coatNormal": 9205,
+              "ambientOcclusion": 512,
+              "volumeThickness": 2305
+            }
+          },
+          "usdProfile": "arkit",
+          "usdUnits": "m",
+          "excludeTangents": false,
+          "forceDoubleSidedMeshes": false
+        }
+      }
+    }
+  ]
+}
