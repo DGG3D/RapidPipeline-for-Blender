@@ -33,10 +33,20 @@ bl_info = {
     "category": "RapidPipeline",
 }
 
+import os
+
 import bpy  # type: ignore
 
+files = ["main_widget", "basic_elements", "compound_elements",
+     "gui_commons", "about_dialog",  "run_rpde", "license_manager", "magic_actions_operator",
+    ]
+
+dirname = os.path.dirname(__file__)
+cad_import = os.path.isfile(os.path.join(dirname, "cad_import.py"))
+if cad_import:
+    files.append("cad_import")
+
 register, unregister = bpy.utils.register_submodule_factory(
-    __name__,
-    ["main_widget", "basic_elements", "compound_elements",
-     "gui_commons", "about_dialog",  "run_rpde", "license_manager", "cad_import",
-    ])
+    __name__, files
+    )
+

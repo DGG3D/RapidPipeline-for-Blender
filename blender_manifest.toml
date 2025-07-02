@@ -2,7 +2,7 @@ schema_version = "1.0.0"
 
 id = "processor_plugins"
 name = "RapidPipeline_for_Blender"
-version = "0.2.1_1"
+version = "0.2.3"
 
 blender_version_min = "4.2.0"
 type = "add-on"

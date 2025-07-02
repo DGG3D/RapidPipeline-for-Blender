@@ -1,0 +1,50 @@
+{
+  "import": {
+    "general": {
+      "rotateZUp": false
+	},
+    "CAD": {
+      "tessellationResolution":"fine", 
+      "sewTolerance": 0.05, 
+      "removeTJunctions": false 
+    },
+    "discard": {
+      "cameras": false,
+      "lights": false,
+      "animations": false,
+      "morphTargets": false,
+      "unusedUVs": true
+    }
+  },
+  "3dEdit": {
+    "meshNormals": {
+      "recomputeInputNormals": false
+    }
+  },
+"sceneGraphFlattening": {
+    "method": "byMaterial",
+    "preservedSceneDepth": 0,
+    "splitMode": "byMaterial"
+  },
+  "optimize": {
+    "3dModelOptimizationMethod": {
+      "onlyMaterial": {
+        "materialMerger": {
+          "materialRegenerator": {
+              "materialReplacer": {
+                "defaultMaterial": {
+                  "generateUVs": {
+            "cubeUnwrap": {
+              "scale": 1.0
+               }
+             }
+           }
+          }
+         }
+        }
+      }
+    }
+  },
+  "export": [
+  ]
+}

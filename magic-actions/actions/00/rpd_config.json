@@ -1,0 +1,29 @@
+{
+    "export": [
+      {
+        "preserveTextureFilenames": false,
+        "reencodeTextures": "auto",
+        "format": {
+          "glb": {}
+        }
+      },
+      {
+        "preserveTextureFilenames": false,
+        "reencodeTextures": "auto",
+        "discard": {
+          "unusedUVs": false,
+          "emptyNodes": false
+        },
+        "format": {
+          "fbx": {}
+        }
+      }
+    ],
+    "import": {
+      "CAD": {
+        "tessellationResolution":"fine", 
+        "sewTolerance": 0.1, 
+        "removeTJunctions": false 
+      }
+    }
+  }

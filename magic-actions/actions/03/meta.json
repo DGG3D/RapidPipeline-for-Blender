@@ -1,0 +1,23 @@
+{
+    "uid"         : "MA2025052903",
+    "min_engine_version" : [7,1,0],
+    "ui_prio_hints" : { "substance_painter" : -1 },
+    "is_import_action": false,
+    "name"        : "Bake Textures",
+    "button_name" : "Bake Textures",
+    "explanation" : "Bakes surface details like color, lighting, normals, and shadows into texture maps using the model’s UVs. This improves performance by reducing shader complexity, material count, and real-time calculations—ideal for lightweight, real-time assets in games or web viewers.",
+    "exposed_options" : [
+        {
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.packingResolution"
+        },
+        {
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.bakingResolution.default"
+        },
+        {
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.keepTiledUVs"
+        },
+        {
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.atlasFactor"
+        }
+    ]
+}

@@ -1,0 +1,26 @@
+{
+    "uid"         : "MA2025052906",
+    "min_engine_version" : [7,3,1],
+    "ui_prio_hints" : { "substance_painter" : 2 },
+    "is_import_action": true,
+    "name"        : "Import 3D/CAD (Tiling UVs)",
+    "button_name" : "Import 3D/CAD (Tiling UVs)",
+    "explanation" : "Imports a 3D/CAD model, cleans it up by sewing patches etc., and assigns tiling UVs. These UVs are non-paintable, but great for material assignment workflows. UVs are created through triplanar mapping.",
+    "exposed_options" : [
+        {
+            "name": "Convert Z-Up to Y-Up",
+            "description" : "Converts a file from Z-Up to Y-Up orientation on import through rotation, by default this is turned off. Note that this option does not detect the actual axis system, thus only recommended if the axis system of the file to import is known.",
+            "path": "import.general.rotateZUp"
+        },
+        {
+            "name": "CAD Sewing Tolerance",
+            "description" : "Helps with sewing CAD surface patches before conversion into triangles (tessellation). By default it is set to 0.05 mm, meaning if two surfaces have a gap greater than 0.05mm, they will not be sewed.",
+            "path": "import.CAD.sewTolerance"
+        },
+        {
+            "name": "Tiling UV Scale",
+            "description" : "Scale factor for the tiling UVs. By default, the scale is 1.0 meaning the unwrapped tiles correspond to the respective scale of the 3D surfaces in meters.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.materialReplacer.defaultMaterial.generateUVs.cubeUnwrap.scale"
+        }
+    ]
+}

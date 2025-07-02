@@ -1,0 +1,36 @@
+{
+    "uid"         : "MA2025052907",
+    "min_engine_version" : [7,3,1],
+    "ui_prio_hints" : { "substance_painter" : -1 },
+    "is_import_action": false,
+    "name"        : "Remeshing&Baking",
+    "button_name" : "Remeshing&Baking",
+    "explanation" : "Remeshes to a lower face count, creates a UV atlas and bakes surface details like color, lighting, normals, and shadows (occlusion) into texture maps. This improves performance by reducing shader complexity, material count, and real-time calculations—ideal for lightweight, real-time assets in games or XR environments.",
+    "exposed_options" : [
+        {
+            "name": "Texture Baking Resolution",
+            "description" : "Steers the Resolution of the baked textures, default is 4096x4096 pixels.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.bakingResolution.default"
+        },
+        {
+            "name": "Face Target",
+            "description" : "The target amount of faces (triangles), default is 50,000 triangles.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.target.faces.value"
+        },
+        {
+            "name": "Remeshing Resolution",
+            "description" : "The initial resolution of the remeshing process before any face target is applied, default is 11 corresponding to the highest available accuracy. If lower accuracy is required, e.g. for hole filling, a value of 6 is recommended.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.resolution"
+        },
+        {
+            "name": "Keep Meshes and Materials Separate",
+            "description" : "Decides if all meshes and materials should be kept separate for remeshing and baking according to a given method; byOpacity will keep meshes related to alpha materials and textures separate, byMaterial will merge all meshes associated with respective materials and keep them separated throughout remeshing and baking. The default method full merges all meshes and materials, resulting in a loss of alpha textures and instead bakes them flat on the nearest opaque surface.",
+            "path": "sceneGraphFlattening.method"
+        },
+        {
+            "name": "Surface Detail to Alpha Baking",
+            "description" : "If checked, topological holes in the geometry will be baked into an alpha texture map. A lower remeshing resolution such as 6 is highly recommended in order to close surface holes in the geometry before baking. This can be very helpful for simulating a lot of surface detail from geometric cavities and mesh-like structures even with a simple low resolution remeshed surface.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.topologicalHolesToAlpha"
+        }
+    ]
+}

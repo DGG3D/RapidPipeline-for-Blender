@@ -44,7 +44,7 @@ from .basic_elements import (
 from .gui_commons import ProcessorPlugin, UIElement
 from .scene_utils import blend_create_prop, blend_scene_getattr, blend_scene_setattr, get_uuid, set_uuid
 
-ui_elements_dict = {} #key -> paths, value -> UIElement
+ui_elements_dict:dict[str, UIElement] = {} #key -> paths, value -> UIElement
 def init_ui_element(
         name: str, settingid: str, parent: UIElement = None, uuid_dict:dict= {}, schema: dict = {}) -> UIElement:
     override_rules = ProcessorPlugin.ui_rules.get("overrideUIElement", {})
@@ -61,8 +61,8 @@ def init_ui_element(
             if created_oneof.path:
                 oneof_path = created_oneof.path.copy()
                 oneof_path.append("Oneof")
-                set_uuid(uuid_dict, set(oneof_path))
-                ui_elements_dict[get_uuid(uuid_dict, oneof_path)] = created_oneof
+                set_uuid(set(oneof_path))
+                ui_elements_dict[get_uuid(oneof_path)] = created_oneof
                 parent.child_elements.append(created_oneof)
 
         if "type" in schema:
@@ -104,11 +104,11 @@ def init_ui_element(
         print(traceback.print_stack())
 
     if created_property.path:
-        set_uuid(uuid_dict, set(created_property.path))
-        ui_elements_dict[get_uuid(uuid_dict, created_property.path)] = created_property
+        set_uuid(path=(set(created_property.path)))
+        ui_elements_dict[get_uuid(created_property.path)] = created_property
     return created_property
 
-def get_ui_elements_dict() -> dict:
+def get_ui_elements_dict() -> dict[str, UIElement]:
     return ui_elements_dict
 
 class CompoundUIElement(UIElement):
@@ -134,7 +134,7 @@ class CompoundUIElement(UIElement):
             oneof_path = self.path.copy()
             oneof_path.append('Oneof')
             #TODO maybe instead dont create children in Oneof widget at all and just create them here
-            oneof:OneOfWidget = ui_elements_dict[get_uuid(self.uuid_dict, oneof_path)]
+            oneof:OneOfWidget = ui_elements_dict[get_uuid(oneof_path)]
             for element in oneof.child_elements.copy():
                 self.child_elements.append(element)
                 self.children_by_level[element.getLevel()].append(element)
@@ -159,10 +159,10 @@ class CompoundUIElement(UIElement):
         for child in self.child_elements:
             child.setDisabled(not self.ignore_widget.isChecked())
 
-    def setValue(self, value, context) -> bool:
+    def setValue(self, value:Any, context:bpy.types.Context) -> bool:
         return super().setValue(bool(value), context)
 
-    def getValue(self, context):
+    def getValue(self, context:bpy.types.Context)-> tuple[Any,str]:
         return super().getValue(context)
 
     def getSettings(self) -> dict:
@@ -240,16 +240,16 @@ class SimpleContainer(CompoundUIElement):
             pass
             #panel_layout.prop(self.ignore_widget, 0, self.layout.columnCount())
 
-    def isToggleable(self):
+    def isToggleable(self) -> bool:
         return True
 
-    def setDefaultValue(self, context):
+    def setDefaultValue(self, context:bpy.types.Context):
         self.setValue(False, context)
 
-    def setValue(self, value:bool, context):
+    def setValue(self, value:bool, context:bpy.types.Context):
         blend_scene_setattr(*self.getValue(context), bool(value))
 
-    def getValue(self, context=None) -> tuple[Any, Any]:
+    def getValue(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
         return blend_scene_getattr(bpy.context.scene, self.settingid, self.uuid_dict, self.type, self.path)
 
 class EmptyCompoundUIElement(CompoundUIElement):
@@ -257,7 +257,7 @@ class EmptyCompoundUIElement(CompoundUIElement):
         super().__init__(name, settingid, parent, schema, uuid_dict, "object")
         self.createChildElements()
 
-    def isdrawn(self):
+    def isdrawn(self) -> bool:
         return super().isdrawn()
 
     def draw_on_panel(self, layout:bpy.types.UILayout, context:bpy.types.Context, panel:bpy.types.Panel):
@@ -302,7 +302,7 @@ class EmptyCompoundUIElement(CompoundUIElement):
         else:
             return super().getSettings()
 
-    def setDefaultValue(self, context):
+    def setDefaultValue(self, context:bpy.types.Context) -> None:
         if self.default:
             return super().setDefaultValue(context)
         else:
@@ -320,7 +320,7 @@ class EmptyCompoundUIElement(CompoundUIElement):
                 bpy.context.scene, self.settingid, self.uuid_dict, self.type, self.path)
         return getattr(attribute_env, attribute)
 
-    def setValue(self, value, context):
+    def setValue(self, value:Any, context:bpy.types.Context) -> bool:
         # set oneOf to correct value:
         if 'oneOf' in self.schema:
             oneof_path = self.path.copy()
@@ -432,7 +432,7 @@ class GroupPanel(bpy.types.Panel):
     UI_elements:list[UIElement] = []
     parent_element: UIElement = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:Any, **kwargs:Any):
         super().__init__(*args, **kwargs)
         self.parent_panel:bpy.types.Panel = getParentPanel(self.bl_parent_id)
 
@@ -494,7 +494,7 @@ class GroupWidget(CompoundUIElement):
         super().__init__(name, settingid, parent, schema, uuid_dict, "object")
         self.createChildElements()
 
-    def isdrawn(self):
+    def isdrawn(self) -> bool:
         return super().isdrawn()
 
     def draw_on_panel(self, layout:bpy.types.UILayout, context:bpy.types.Context, panel:bpy.types.Panel):
@@ -503,10 +503,10 @@ class GroupWidget(CompoundUIElement):
 
         _ = panel.layout.row()
 
-    def setValue(self, value:bool, context):
+    def setValue(self, value:bool, context:bpy.types.Context):
         setattr(*self.getValue(context), bool(value))
 
-    def getValue(self, context=None) -> tuple[Any, Any]:
+    def getValue(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
         return blend_scene_getattr(bpy.context.scene, self.settingid, self.uuid_dict, self.type, self.path)
 
     def setIgnoreExport(self, is_displayed:bool):
@@ -686,7 +686,7 @@ class OneOfWidget(CompoundUIElement):
         if self.isToggleable():
             self.setIgnoreExport(True)
 
-    def setValue(self, value, context):
+    def setValue(self, value:Any, context:bpy.types.Context) -> bool:
         return super().setValue(value, context)
 
 class FileExportType(SimpleContainer):
@@ -694,13 +694,13 @@ class FileExportType(SimpleContainer):
         super().__init__(name, settingid, parent, uuid_dict,  schema)
 
     def draw_on_panel(self, layout:bpy.types.UILayout, context:bpy.types.Context, panel:bpy.types.Panel):
-        pass 
+        pass
 
     def getSettings(self) -> list:
         # NOTE: the actual CLI schema has an array of export settings
         return {}
 
-    def setDefaultValue(self, context):
+    def setDefaultValue(self, context:bpy.types.Context):
         pass
 
     def setSettings(self, settings: dict):
@@ -735,7 +735,7 @@ class TabElement(CompoundUIElement):
         #TODO
         return None
 
-    def getSettings(self):
+    def getSettings(self) -> dict:
         out_settings = {}
         for e in self.child_elements:
             if e.name and not e.ignoreSettingExport():

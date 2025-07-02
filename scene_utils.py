@@ -45,11 +45,11 @@ def blend_scene_init_setattr(
     if toggable:
         path_toggable = path.copy()
         path_toggable.append("toggable")
-        set_uuid(uuid_dict, set(path_toggable))
-    set_uuid(uuid_dict, set(path))
-    if not hasattr(scene, get_uuid(uuid_dict, path)):
+        set_uuid(set(path_toggable))
+    set_uuid(set(path))
+    if not hasattr(scene, get_uuid(path)):
         if property_group:
-            setattr(scene, get_uuid(uuid_dict, path), value_function)
+            setattr(scene, get_uuid(path), value_function)
         else:
             print("ERROR: Attribute is not settable")
             return
@@ -59,16 +59,16 @@ def blend_scene_setattr(attribute_env:bpy.types.Scene, attribute:Any, value:Any)
         setattr(attribute_env, attribute, value)
     except Exception:
         print("Warning: could not set attribute.")
-#        traceback.print_stack()
+        traceback.print_stack()
         traceback.print_exc()
 
 def blend_scene_setattr_enum(scene:bpy.types.Scene, id:str, uuid_dict:dict, property:Any, path:set):
-    if not get_uuid(uuid_dict, path):
-        set_uuid(uuid_dict, set(path))
-    if not hasattr(scene, get_uuid(uuid_dict, path)):
-        setattr(scene, get_uuid(uuid_dict, path), property)
+    if not get_uuid(path):
+        set_uuid(set(path))
+    if not hasattr(scene, get_uuid(path)):
+        setattr(scene, get_uuid(path), property)
     else:
-        getattr(scene, get_uuid(uuid_dict, path))
+        getattr(scene, get_uuid(path))
         print(f"Warning: Scene already has attribute: {id}, adding new element to collection")
 
 def blend_scene_getattr(
@@ -77,9 +77,8 @@ def blend_scene_getattr(
         uuid_dict:dict,
         type_in:str = None,
         path:set=[]) -> tuple[bpy.types.Scene, Any]:
-    attribute_uuid = get_uuid(uuid_dict, path)
+    attribute_uuid = get_uuid(path)
     # has to search trough the correct collection property and get the property where the path matches
-    #get all type_prop values:
     try:
         if hasattr(scene, attribute_uuid):
             prop = getattr(scene, attribute_uuid)
@@ -110,15 +109,29 @@ def blend_create_prop(panel_layout:bpy.types.UILayout,
         panel_layout.prop(attribute_env, attribute, text=name, slider=slider)
 
 
-def set_uuid(uuid_paths:dict, path:set[str]):
-    if not get_uuid(uuid_paths, path):
+uuid_paths:dict = {}
+
+def set_uuid(path:set[str]):
+    if not get_uuid(path):
         uuid_paths[str(uuid.uuid4())] = set(path)
 
-def get_uuid(uuid_paths:dict, path:set[str]) -> str:
+def get_uuid(path:set[str]) -> str:
     for key, value in uuid_paths.items():
         if value == set(path):
             return key
     return None
 
-def get_path(uuid_paths:dict, uuid:str) -> set[str]:
+def get_path(uuid:str) -> set[str]:
     return uuid_paths[uuid]
+
+def get_ui_element(search_path:set[str]):
+    from .compound_elements import get_ui_elements_dict
+    ui_element = None
+    ui_elements_dict = get_ui_elements_dict()
+
+    for path_uuid, ui_element in ui_elements_dict.items():
+        if get_path(path_uuid) == search_path:
+            return ui_element
+
+    print(f"Warning, UI element could not be found with path {search_path}")
+    return None

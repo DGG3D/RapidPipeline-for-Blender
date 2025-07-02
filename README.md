@@ -86,8 +86,7 @@ Please read this file for the full license of the GUI plugin:
 software governed by its own EULA. The RapidPipeline 3D Processor Engine CLI
 does NOT make use of the 3D Processor Plugin For Blender and does NOT follow
 the GNU GPL-3.0 license. See the RapidPipeline 3D Processor EULA file (under
-```rpde/EULA_RapidPipelineEngine.rtf``` after installation, or during the installation
-process itself) for further information.**
+```rpde/copyright.txt``` after installation) for further information.**
 
 
 🐛 Known Issues & Limitations

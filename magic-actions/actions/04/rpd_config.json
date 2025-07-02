@@ -1,0 +1,81 @@
+{
+  "import": {
+    "general": {
+      "rotateZUp": false
+	},
+    "CAD": {
+      "tessellationResolution":"fine", 
+      "sewTolerance": 0.05, 
+      "removeTJunctions": false 
+    },
+    "discard": {
+      "cameras": false,
+      "lights": false,
+      "animations": false,
+      "morphTargets": false,
+      "unusedUVs": true
+    }
+  },
+  "3dEdit": {
+    "meshNormals": {
+      "recomputeInputNormals": false
+    }
+  },
+"sceneGraphFlattening": {
+    "method": "none",
+    "preservedSceneDepth": 0,
+    "splitMode": "byMaterial"
+  },
+  "optimize": {
+    "3dModelOptimizationMethod": {
+      "onlyMaterial": {
+          "materialMerger": {
+            "materialRegenerator": {
+              "uvAtlasGenerator": {
+                "textureBaker": {
+                  "bakingResolution": {
+                    "default": 0
+                  },
+                  "sampleCount": 4,
+                  "texMapAutoScaling": true,
+                  "bakeCombinedScene": false,
+                  "topologicalHolesToAlpha": false,
+                  "powerOfTwoResolution": "ceil",
+                  "inpaintingRadius": 32.0
+                },
+                "method": "isometric",
+                "segmentationCutAngle": 88.0,
+                "segmentationChartAngle": 130.0,
+                "maxAngleError": 114.0,
+                "maxPrimitivesPerChart": 10000,
+                "cutOverlappingPieces": true,
+                "atlasMode": "separateMaterials",
+                "allowRectangularAtlases": false,
+                "packingResolution": 1024,
+                "packingPixelDistance": 2,
+                "atlasFactor": 1
+             }
+           },
+          "keepTiledUVs": false,
+          "tilingThreshold": 1.5
+         }
+      }
+    }
+  },
+  "export": [
+    {
+      "fileName": "",
+      "textureMapFilePrefix": "",
+      "discard": {},
+      "format": {
+        "glb": {
+          "pbrMaterial": {
+            "maxTextureResolution": {
+              "default": 0
+            }
+		  }
+        }
+      }
+    }
+  ]
+}

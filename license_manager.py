@@ -63,8 +63,8 @@ class EnterLicenseOperator(bpy.types.Operator):
 
 class CreateTokenOperator(bpy.types.Operator):
     bl_idname = "processor.create_token"
-    bl_description = "Create API Token"
-    bl_label = "Create API Token"
+    bl_description = "Create Authentication Token"
+    bl_label = "Create Authentication Token"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context:bpy.types.Context) -> set[str]:
@@ -91,12 +91,12 @@ class LicensePanel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = "RapidPipeline"
     bl_parent_id = "VIEW3D_PT_RapidPipeline"
-    bl_label = "Set RapidPipeline API Token"
+    bl_label = "Set RapidPipeline Authentication Token"
     bl_options = {'HIDE_HEADER'}
 
-    warning_label = "A RapidPipeline API License Token file was not found."
+    warning_label = "A RapidPipeline Authentication License Token file was not found."
 
-    label_str_1 = "Please insert your API token. "
+    label_str_1 = "Please insert your Authentication token. "
     label_str_2 = "By default, it will be valid for the current session only."
 
     t_and_c_str_1 = "Please take time to read our General Terms and Conditions carefully and confirm below."
@@ -114,7 +114,7 @@ class LicensePanel(bpy.types.Panel):
 
             # add checkbox to save to disk
             self.layout.prop(context.scene, "use_token_future_sessions", text="Use Token for future sessions")
-            self.layout.prop(context.scene, "api_token", text="Insert API Token")
+            self.layout.prop(context.scene, "api_token", text="Insert Authentication Token")
 
             _ = self.layout.row()
             t_c_layout = self.layout.row()
@@ -128,7 +128,7 @@ class LicensePanel(bpy.types.Panel):
             _ = self.layout.row()
             panel_layout = self.layout.row()
             panel_layout.operator(EnterLicenseOperator.bl_idname, text="Save Token")
-            panel_layout.operator(CreateTokenOperator.bl_idname, text="Create API Token")
+            panel_layout.operator(CreateTokenOperator.bl_idname, text="Create Authentication Token")
             if context.scene.override_token:
                 panel_layout = self.layout.row()
                 panel_layout.operator(CancelTokenOperator.bl_idname, text="Cancel")
@@ -147,16 +147,23 @@ class ProcessorLicense:
             return True
 
         # if there's no license file for the plugin, see global envvar
+        # returns true if license file could be found and a token is set
         if "RPD_ACCOUNTFILE" not in os.environ:
             return False
-        return os.path.isfile(os.environ["RPD_ACCOUNTFILE"])
+        if not os.path.isfile(os.environ["RPD_ACCOUNTFILE"]):
+            return False
+        return ProcessorLicense.getAPIToken()
 
     @staticmethod
     def getAPIToken() -> str:
         if not os.environ.get("RPD_ACCOUNTFILE", ""):
             return ""
-        account_data = JSonUtils.loadJSON(os.environ["RPD_ACCOUNTFILE"])
-        return account_data["token"]
+        try:
+            account_data = JSonUtils.loadJSON(os.environ["RPD_ACCOUNTFILE"])
+            return account_data["token"]
+        except Exception:
+            print(f'Warning: The provided RPD Account file in {(os.environ["RPD_ACCOUNTFILE"])} could not be read.')
+            return None
 
     @staticmethod
     def createLicenseFile(token: str, is_temp: bool) -> str:

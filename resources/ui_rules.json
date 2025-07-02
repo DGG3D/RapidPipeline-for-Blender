@@ -23,7 +23,6 @@
             "3dProcessor"
         ],
         "SimpleContainer":[
-            "import",
             "3dEdit",
             "meshCulling",
             "optimize",

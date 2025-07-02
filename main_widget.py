@@ -27,22 +27,21 @@ rpde/EULA_RapidPipelineEngine.rtf after installation, or during the install
 process) for further information.
 """
 
+import json
 import os
 import queue
-import shutil
 import subprocess
 import textwrap
-import traceback
 import webbrowser
-from abc import abstractmethod
 from sys import platform
-from typing import Any, List
+from typing import List
 
 import bpy  # type: ignore
 import bpy.utils.previews  # type: ignore
 
 # defines user appdata folder for the plugin
-base_dcc_data_folder = os.path.join(os.path.expanduser("~"), 'Documents') if 'darwin' in platform else os.getenv("LOCALAPPDATA")
+base_dcc_data_folder = os.path.join(
+    os.path.expanduser("~"), 'Documents') if 'darwin' in platform else os.getenv("LOCALAPPDATA")
 os.environ["RPDP_PROCESSOR_DCC_DATA"] = os.path.join(base_dcc_data_folder, "RapidPipeline 3D Processor Plugins")
 
 from .about_dialog import AboutDialog, AboutDialogPanel
@@ -54,21 +53,27 @@ from .basic_elements import (
     IntegerPropertyGroup,
     StringPropertyGroup,
 )
-from .cad_import import CADImportOperator
+from .magic_actions_operator import ActivateMagicActionOperator, DeactivateMagicActionOperator
+
+dirname = os.path.dirname(__file__)
+cad_import = os.path.isfile(os.path.join(dirname, "cad_import.py"))
+if cad_import:
+    from .cad_import import CADImportFileOperator
 from .compound_elements import GroupPanel, SimpleContainer, TabElement, get_ui_elements_dict, init_ui_element
-from .gui_commons import ProcessorPlugin, SettingsValidator, UIElement, UserDialog
-from .json_utils import JSonUtils
+from .gui_commons import ProcessorPlugin, UIElement
 from .license_manager import ProcessorLicense
+from .magic_actions_operator import magic_actions_options
 from .progress_dialog import ProgressDialog
-from .run_rpde import RunPipeline
+from .run_operator import RunOperator
 from .scene_utils import (
+    blend_create_prop,
     blend_scene_getattr,
     blend_scene_init_setattr,
-    blend_scene_setattr,
     blend_scene_setattr_enum,
     get_uuid,
     set_uuid,
 )
+from .settings_operator import DefaultsOperator, LoadOperator, SaveOperator
 
 preview_collections = {}
 uuid_paths = {} #key: uuid value: paths of schema
@@ -101,140 +106,6 @@ class LevelOperator(bpy.types.Operator):
         print(f"Scene level is now: {self.level}")
         context.scene.level = self.level
         return {'FINISHED'}
-
-class LoadOperator(bpy.types.Operator):
-    bl_idname = "object.load"
-    bl_description = "Load a custom .json settings file"
-    bl_label = "Load JSON Preset"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    filepath: bpy.props.StringProperty(subtype='FILE_PATH') # type: ignore
-
-    def execute(self, context:bpy.types.Context) -> set[str]:
-        if self.filepath.endswith('.json'):
-            self.importSettings(self.filepath, context)
-        else:
-            self.report({'WARNING'}, "The selected file does not have a valid extension (.json).")
-        return {'FINISHED'}
-
-    # Define a function to trigger the file browser
-    def invoke(self, context:bpy.types.Context, event:bpy.types.Event) -> set[str]:
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
-
-
-    def importSettings(self, load_path:str, context:bpy.types.Context) -> None:
-        dialog_file = load_path
-
-        # if the user canceled, return
-        if not dialog_file:
-            return
-
-        if not os.path.isfile(dialog_file):
-            print(f"Settings file wasn't loaded successfully: {dialog_file}.")
-            retry_label = "There was an error loading the settings file, or it doesn't exist."
-            if not UserDialog.errorRetry(self, "Error Loading Settings", retry_label):
-                return
-            else:
-                return self.importSettings()
-
-        # validate settings with RPDE
-        if not MainPanel.validator.validate(dialog_file):
-            print(f"Settings file was invalid: {dialog_file}.")
-            retry_label = "The settings file provided failed validation by the RapidPipeline 3D Processor."
-            self.layout.label(text="The settings file provided failed validation by the RapidPipeline 3D Processor.",
-                              icon="ERROR")
-            dialog_file = None
-            return
-
-        # load settings file into dict
-        settings = JSonUtils.loadJSON(dialog_file)
-        if not settings:
-            print(f"Settings file was invalid: {dialog_file}.")
-            retry_label = "The settings file provided is invalid or empty."
-            if not UserDialog.errorRetry(self, "Error Loading Settings", retry_label):
-                return
-            else:
-                return self.importSettings()
-
-        print(f"The settings file {dialog_file} is valid.")
-
-        # first, reset to default - important to toggle everything off
-        resetSettingsToDefault(context)
-
-#        # apply loaded settings to the UI - will automatically toggle them on
-        setValue(context, settings)
-
-class SaveOperator(bpy.types.Operator):
-    bl_idname = "processor.save"
-    bl_description = "Save out the current settings as a .json file"
-    bl_label = "Save JSON Preset"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    filepath: bpy.props.StringProperty(subtype='FILE_PATH') # type: ignore
-
-    def execute(self, context:bpy.types.Context) -> set[str]:
-        if self.filepath:
-            self.exportSettings(self.filepath, context)
-        return {'FINISHED'}
-
-    # Define a function to trigger the file browser
-    def invoke(self, context:bpy.types.Context, event:bpy.types.Event) -> set[str]:
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
-
-    def exportSettings(self, file_path:str, context:bpy.types.Context) -> None:
-        print("export settings")
-
-        dialog_file = file_path
-
-        # if the user canceled, return
-        if not dialog_file:
-            return
-
-        # build settings from current UI input
-        settings_json = {}
-        settings_json = root_element.getSettings()
-
-        os.makedirs(os.path.dirname(dialog_file), exist_ok=True)
-        if not str(dialog_file).endswith('.json'):
-            dialog_file += '.json'
-        if not JSonUtils.saveJSON(settings_json, dialog_file):
-            print(f"Settings file wasn't saved successfully: {dialog_file}.")
-            confirm_label = "There was an error saving the settings file."
-            if not UserDialog.errorRetry(self, "Error Saving Settings", confirm_label):
-                return
-            else:
-                return self.exportSettings()
-
-        if not MainPanel.validator.validate(dialog_file):
-            critical_label = "The exported settings file failed settings validation, the plugin will now close."
-            UserDialog.critical(self, "Critical Error", critical_label, self.validator.getLogLines())
-#                self.main_application.quit()
-
-        print(f"Settings file saved successfully at: {dialog_file}.")
-        confirm_label = "The settings file were saved successfully."
-        UserDialog.okInfo(self, "Save Successful", confirm_label)
-
-
-class DefaultsOperator(bpy.types.Operator):
-    bl_idname = "processor.default"
-    bl_description = "Reset all settings to their default states"
-    bl_label = "default"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    def execute(self, context:bpy.types.Context) -> set[str]:
-        self.defaultSettings(context)
-        return {'FINISHED'}
-
-    def defaultSettings(self, context:bpy.types.Context) -> None:
-        """
-        Callback to provide dialog to user and apply default settings, if confirmed.
-        """
-        #TODO ask user for confirmation
-
-        print("Reset to defaults: ")
-        resetSettingsToDefault(context)
 
 class HelpOperator(bpy.types.Operator):
     bl_idname = "processor.help"
@@ -300,333 +171,7 @@ class RestartUIOperator(bpy.types.Operator):
     def execute(self, context:bpy.types.Context) -> set[str]:
         print("Reloading UI...")
         bpy.types.Scene.rpde_UI_error = False
-#        unregister()
-#        register()
         return {'FINISHED'}
-
-
-class RunOperator(bpy.types.Operator):
-    bl_idname = "processor.run"
-    bl_description = "Run RapidPipeline 3D Processor with the selected settings"
-    bl_label = "run"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    output_cmd: bpy.props.StringProperty() # type: ignore
-
-    # define file paths
-    extension = os.environ.get("RPDP_PROCESSOR_DCC_OUTPUT", "glb")
-    import_extension = "glb"
-    output_folder: str = os.environ["RPDP_PROCESSOR_DCC_DATA"]
-    output_filename = ""
-
-    def execute(self, context:bpy.types.Context) -> set[str]:
-        if context.scene.rpde_running:
-            bpy.types.Scene.rpde_running = False
-            self.processFinished()
-        else:
-            print("execute run")
-            self.chooseFolderAndRunPipeline(context)
-        return {'FINISHED'}
-
-    def chooseFolderAndRunPipeline(self, context:bpy.types.Context):
-        """
-        Disables elements, and starts RapidPipeline process with the current UI settings.
-        A file with the current settings is exported and validated.
-        """
-        # build settings from current UI input
-        current_settings = root_element.getSettings()
-        current_settings["export"] = [
-            {
-                "fileName": "",
-                "textureMapFilePrefix": "",
-                "discard": {},
-                "format": {
-                    "glb": {
-                    "pbrMaterial": {}
-                    }
-                }
-            }
-        ]
-
-        # make sure to get the correct filename
-        current_name = current_settings["export"][0].get("fileName", "")
-        if not current_name:
-            self.output_filename = "rpde_file"
-        else:
-            self.output_filename = current_name
-
-        json_path = self.getOutputJSonPath()
-        if not JSonUtils.saveJSON(current_settings, json_path):
-            error_message = "Unable to save temporary settings file for RapidPipeline execution."
-            UserDialog.critical(self, "Unable to Run RapidPipeline", error_message)
-#            self.main_application.quit()
-        print(f"Exported Settings: {json_path}")
-
-        # exports model to predefined file location
-        input_file = self.getProcessorInputFile()
-        os.makedirs(os.path.dirname(input_file), exist_ok=True)
-        copied_nodes = self.exportModel(input_file)
-        if not os.path.isfile(input_file):
-            print(f"ERROR: File {input_file} not found.")
-            error_label = "Unable to process file with RapidPipeline 3D Processor, input file not found. "
-            error_label += "This is likely an error with the DCC export."
-            UserDialog.critical(self, "File Not Found", error_label)
-            return
-
-        output_json_path = self.getOutputJSonPath()
-        RunPipeline.runPipeline(input_file, output_json_path, self.output_folder, copied_nodes)
-
-
-    def getOutputJSonPath(self) -> str:
-        return os.path.join(self.getExecutionOutputFolder(), "rpdp_dcc_plugin_settings.json")
-
-    def getExecutionInputFolder(self) -> str:
-        return os.path.join(os.environ["RPDP_PROCESSOR_DCC_DATA"], "0_glb")
-
-
-    def getProcessorInputFile(self) -> str:
-        return os.path.join(self.getExecutionOutputFolder(), f"{self.output_filename}.{self.extension}")
-
-    def getExecutionOutputFolder(self) -> str:
-        return os.path.join(self.output_folder, f"0_{self.extension}")
-
-    @abstractmethod
-    def exportModel(self, file_path: str) -> list:
-        """
-        Exports model to be run by the RapidPipeline 3D Processor Engine
-        """
-        export_path = os.path.dirname(file_path)
-        os.makedirs(export_path, exist_ok=True)
-
-        window = bpy.context.window_manager.windows[0]
-        with bpy.context.temp_override(window = window):
-            export_selection = bpy.context.selected_objects
-
-            if (len(export_selection) == 0):    # No objects selected -> select all objects
-                for o in list(bpy.data.objects):
-                    o.select_set(True)
-                    export_selection.append(o)
-
-            #NOTE We need to copy the object since we apply modifiers before the export step
-            # duplicate nodes (duplicated nodes are now selected):
-            bpy.ops.object.duplicate()
-            copied_nodes = bpy.context.selected_objects
-            bpy.ops.object.select_all(action='DESELECT')
-
-            for idx, o in enumerate(copied_nodes):
-                # When only child is selected the duplicated child will then stay a child of the existing parent.
-                if o.parent not in copied_nodes:
-                    parented_wm = o.matrix_world.copy()
-                    o.parent = None
-                    o.matrix_world = parented_wm
-
-                o.name = export_selection[idx].name + "_processed"
-
-                if o.type == 'MESH':
-                    for _, m in enumerate(o.modifiers):
-                        try:
-                            bpy.ops.object.modifier_apply(modifier=m.name)
-                        except Exception:
-                            print("Error in applying modifiers.")
-
-            for original_node in export_selection:
-                original_node.select_set(False)
-                if original_node.type == 'MESH':
-                    original_node.hide_set(True)
-
-            # select all copied nodes and export
-            for object in copied_nodes:
-                object.select_set(True)
-            try:
-                bpy.ops.export_scene.gltf(
-                    export_format='GLB', use_active_scene=True, use_selection=True, filepath=file_path)
-            except Exception:
-                print(f"Could not export glb file: {file_path}")
-                print(traceback.format_exc())
-
-        return copied_nodes
-
-    @abstractmethod
-    def importModel(self, file_path: str):
-        """
-        Reimports model run by the RapidPipeline 3D Processor Engine
-        """
-        # create parent relations for collections
-        parent = dict()
-        for c in bpy.data.collections:
-            parent[c] = None
-        for c in bpy.data.collections:
-            for ch in c.children:
-                parent[ch] = c
-
-        # deleting existing meshes
-        window = bpy.context.window_manager.windows[0]
-        with bpy.context.temp_override(window = window):
-            objects_collections = {}    # dict(node_name : collection)
-            selection = bpy.context.selected_objects
-            bpy.ops.object.select_all(action='DESELECT')
-            for o in selection:
-                objects_collections[o.name] = (o.users_collection)    # retaining collections
-                o.select_set(True)
-                bpy.ops.object.delete()
-
-            # Workaround for a missing feature in the blender API
-            # see: https://blender.stackexchange.com/questions/202675/python-hide-collection-turn-off-the-eyeball-icon-of-collection-in-outliner
-            def search_collection(parent:bpy.types.Collection, name:str) -> bpy.types.Collection:
-                if parent.name == name:
-                    return parent
-                for c in parent.children:
-                    coll = search_collection(c, name)
-                    if coll:
-                        return coll
-                return None
-
-            # if all nodes of a collection are hidden, unhide nodes and hide collection instead
-            used_collections = [x for xs in objects_collections.values() for x in xs] # get all used collections
-            try:
-                for collection in used_collections:
-                    vlayer = bpy.context.scene.view_layers['ViewLayer']
-                    all_nodes_hidden = True
-                    for node in collection.all_objects:
-                        if not node.hide_get() and "_processed" not in node.name:
-                            all_nodes_hidden = False
-                            break
-                    if all_nodes_hidden:
-                        found_collection = search_collection(vlayer.layer_collection, collection.name)
-                        if found_collection:
-                            found_collection.hide_viewport = True    #hide the collection
-                            for node in collection.all_objects:
-                                node.hide_set(False)
-            except Exception:
-                print("Warning: could not hide collection")
-
-            # import glb
-            try:
-                bpy.ops.import_scene.gltf(filepath=file_path)
-            except Exception:
-                print(f"Could not import glb file: {file_path}")
-                print(traceback.format_exc())
-
-            scene_collection = bpy.data.scenes["Scene"].collection
-            objects_in_scene = bpy.data.objects
-
-            # case for CAD import
-            if not objects_collections:
-                if "_CAD_import" not in bpy.data.collections:
-                    cad_collection = bpy.data.collections.new("_CAD_import")
-                    bpy.context.scene.collection.children.link(cad_collection)
-                else:
-                    cad_collection = bpy.data.collections["_CAD_import"]
-
-                #unhide _CAD_import collection
-                vlayer = bpy.context.scene.view_layers['ViewLayer']
-                processing_collection_viewport = search_collection(vlayer.layer_collection, cad_collection.name)
-                processing_collection_viewport.hide_viewport = False
-
-                for node in objects_in_scene:
-                    try:
-                        scene_collection.objects.unlink(node)
-                        cad_collection.objects.link(node)
-                    except:  # noqa: S112, E722
-                        continue
-            else:
-                if "_processed" not in bpy.data.collections:
-                    processing_collection = bpy.data.collections.new("_processed")
-                    bpy.context.scene.collection.children.link(processing_collection)
-                else:
-                    processing_collection = bpy.data.collections["_processed"]
-
-                #unhide _processed collection
-                vlayer = bpy.context.scene.view_layers['ViewLayer']
-                processing_collection_viewport = search_collection(vlayer.layer_collection, processing_collection.name)
-                processing_collection_viewport.hide_viewport = False
-
-                # Move nodes back into collection
-                for node_name,collections in objects_collections.items():
-                    try:
-                        scene_collection = bpy.data.scenes["Scene"].collection
-                        for collection in collections:
-                            collection_copy = self.moveCollectionIntoProcessed(collection, processing_collection, parent, True)
-                            if node_name in objects_in_scene:
-                                collection_copy.objects.link(objects_in_scene[node_name])
-                        if node_name in objects_in_scene:
-                            scene_collection.objects.unlink(objects_in_scene[node_name])
-                    except Exception:
-                        print("Warning: original node names or collections could not be found.")
-                        print("Placing node in 'Scene Collection' instead.")
-
-    # Take any collection as an input, find all its parents and then move all the parents an itself to the
-    # _processed collection. Returns a copy of the input collection in its correct hierachy
-    def moveCollectionIntoProcessed(
-            self,
-            collection:bpy.types.Collection,
-            processing_collection:bpy.types.Collection,
-            parent: dict,
-            initial_call = False) -> bpy.types.Collection:
-
-        scene_collection = bpy.data.scenes["Scene"].collection
-        collections_names = [collection.name for collection in bpy.data.collections]
-        coll_processed_name = collection.name + "_processed"
-
-        if collection == scene_collection:
-            return processing_collection
-        #if (coll_processed_name) not in collections_names:
-        if initial_call or (coll_processed_name) not in collections_names:
-            collection_copy = bpy.data.collections.new(coll_processed_name)
-        else:
-            return bpy.data.collections[(coll_processed_name)] # collection was already moved
-
-        # If collection on lowest level, move "<collection>_processed" into "_processed"
-        if collection in list(scene_collection.children):
-            bpy.data.collections[processing_collection.name].children.link(bpy.data.collections[collection_copy.name])
-        else:
-            if parent[collection]:  # get all parent collections...
-                parent_collection = self.moveCollectionIntoProcessed(parent[collection], processing_collection, parent)
-                try:
-                    bpy.data.collections[parent_collection.name].children.link(bpy.data.collections[collection_copy.name])
-                except Exception:
-                    print(f"{collection_copy.name} already in {parent_collection.name}")
-        return collection_copy
-
-    def processFinished(self):
-        current_settings = root_element.getSettings()
-        current_settings["export"] = [
-            {
-                "fileName": "",
-                "textureMapFilePrefix": "",
-                "discard": {},
-                "format": {
-                    "glb": {
-                    "pbrMaterial": {}
-                    }
-                }
-            }
-        ]
-
-        current_name = current_settings["export"][0].get("fileName", "")
-        if not current_name:
-            self.output_filename = "rpde_file"
-        else:
-            self.output_filename = current_name
-
-        input_file = self.getInputFilePath()
-
-        self.importModel(input_file)
-
-        # removes temporary input tree
-        shutil.rmtree(self.getExecutionInputFolder())
-
-        # finished successfully, display a msg to the user
-        confirm_label = "The RapidPipeline 3D Processor finished running successfully."
-        UserDialog.okInfo(self, "Process Successful", confirm_label)
-
-        print("Process Successful")
-
-    def getOutputFilePath(self) -> str:
-        return os.path.join(self.getExecutionOutputFolder(), f"{self.output_filename}.{self.extension}")
-
-    def getInputFilePath(self) -> str:
-        return os.path.join(self.getExecutionInputFolder(), f"{self.output_filename}.{self.import_extension}")
 
 def execute_queued_functions() -> float:
     while not execution_queue.empty():
@@ -640,42 +185,6 @@ def get_children(parent:UIElement) -> list[UIElement]:
         for child in parent.child_elements:
             child_nodes.extend(get_children(child))
     return child_nodes
-
-def resetSettingsToDefault(context:bpy.types.Context):
-    """
-    Resets all the UI element settings to their default values.
-    """
-    for element in root_children:
-        element.setDefaultValue(context)
-
-def unpackdict(settings:dict, output_list:list[tuple[str, Any, str]], path:list) -> list[tuple[str, Any, str]]:
-    copy_path = path.copy()
-    for key, value in settings.items():
-        if key == 'export':
-            continue
-        path.append(key)
-        if isinstance(value, list):
-            output_list.append((key, value, path)) # Output list (name, value, path)
-        if isinstance(value, dict):
-            if len(value) == 0:
-                output_list.append((key, True, path.copy())) # To activate panels
-            else:
-                output_list.append((key, list(value.keys())[0], path.copy())) # To activate panels
-            unpackdict(value, output_list, path)
-        if not isinstance(value, dict) and not isinstance(value, list):
-            output_list.append((key, value, path)) # Output list (name, value, path)
-        path = copy_path.copy()
-
-    return output_list
-
-def setValue(context:bpy.types.Context, settings:dict):
-    list_of_settings: list[tuple[str, Any, str]] = unpackdict(settings, [], [])
-
-    for (_, value, path) in list_of_settings:
-        ui_element:UIElement = get_ui_elements_dict()[get_uuid(uuid_paths, path)]
-
-        # set Oneof to correct value
-        ui_element.setValue(value, context)
 
 # loads metadata file
 processor_plugin = ProcessorPlugin()
@@ -730,17 +239,21 @@ class MainPanel(bpy.types.Panel):
     # variables for progress
     progress_dialog: ProgressDialog = None
 
-    validator = SettingsValidator()
-
     def draw_header(self, context: bpy.types.Context):
         pcoll = preview_collections["main"]
         rapidpipeline_icon: bpy.types.Icons = pcoll["rapidPipeline"]
         self.layout.template_icon(icon_value=rapidpipeline_icon.icon_id, scale=1.2)
 
     def draw(self, context: bpy.types.Context):
+        ###############################
+        # draw ui error
+        ###############################
         if context.scene.rpde_UI_error:
             drawUIError(self, context)
             return
+        ###############################
+        # draw rpde window
+        ###############################
         try:
             if context.scene.rpde_running or not context.scene.has_license:
                 if context.scene.rpde_running and not context.scene.rpde_error:
@@ -755,24 +268,38 @@ class MainPanel(bpy.types.Panel):
                     prettyPrint(self, rpde_output, context)
                 return
 
-            def getExecutionButtons(layout:bpy.types.UILayout) -> None:
-                pcoll = preview_collections["main"]
-                load_icon = pcoll["load"]
-                save_icon = pcoll["save"]
-                defaults_icon = pcoll["defaults"]
-                layout.scale_y = 1
-                layout.operator(LoadOperator.bl_idname, icon_value=load_icon.icon_id, text="Load Preset")
-                layout.operator(SaveOperator.bl_idname, icon_value=save_icon.icon_id, text="Save Preset")
-                layout.operator(DefaultsOperator.bl_idname, icon_value=defaults_icon.icon_id, text="Defaults")
-
             pcoll = preview_collections["main"]
             import_icon = pcoll["import"]
+
+            ###############################
+            # draw magic action selection buttons
+            ###############################
+            selection_layout = self.layout.row()
+            selection_layout.operator(DeactivateMagicActionOperator.bl_idname,
+                            depress = False if context.scene.rpde_magicAction else True,
+                            text="Manual Settings")
+            selection_layout.operator(ActivateMagicActionOperator.bl_idname,
+                            depress = True if context.scene.rpde_magicAction else False,
+                            text="Magic Actions (Preview)")
+
+
+            ###############################
+            # draw CAD import option
+            ###############################
             #NOTE only activate when CAD import is enabled in rpde version
-            cad_import_layout = self.layout.row()
-            cad_import_layout.scale_y = 1
-            cad_import_layout.operator(CADImportOperator.bl_idname, icon_value=import_icon.icon_id, text="CAD Import")
-            button_layout = self.layout.grid_flow(row_major=True, columns=0, even_columns=True, even_rows=False, align=True)
-            getExecutionButtons(button_layout)
+            if cad_import:
+                cad_import_layout = self.layout.row()
+                cad_import_layout.scale_y = 1
+                cad_import_layout.operator(
+                    CADImportFileOperator.bl_idname, icon_value=import_icon.icon_id, text="CAD Import")
+
+            ###############################
+            # draw execution buttons
+            ###############################
+            if not context.scene.rpde_magicAction:
+                button_layout = self.layout.grid_flow(
+                    row_major=True, columns=0, even_columns=True, even_rows=False, align=True)
+                self.getExecutionButtons(button_layout)
             run_layout = self.layout.row()
             pcoll = preview_collections["main"]
             run_icon = pcoll["run"]
@@ -780,35 +307,83 @@ class MainPanel(bpy.types.Panel):
             run_layout.operator(RunOperator.bl_idname, icon_value=run_icon.icon_id, text="Run")
 
             _ = self.layout.row()
-
             _ = self.layout.row()
+
+            ###############################
+            # draw magic actions
+            ###############################
+            magic_actions_layout = self.layout.row()
+
+            if context.scene.rpde_magicAction:
+                self.getMagicActions(magic_actions_layout, context)
+
 
             main_layout = self.layout.row()
 
-            # loads, creates logo label
-            self.logo_label = ProcessorPlugin.getLogoLabel()
-            #TODO add logo lable to main layout
+            ###############################
+            # draw level selection
+            ###############################
+            if not context.scene.rpde_magicAction:
+                main_layout.label(text="Level selection: ")
+                self.level_widget = self.getLevelSelection(main_layout, context)
+                main_layout = self.layout.row()
 
-            # add widget for level selection
-            main_layout.label(text="Level selection: ")
-            self.level_widget = self.getLevelSelection(main_layout, context)
-            main_layout = self.layout.row()
+                _ = self.layout.row()
+                _ = self.layout.row()
 
-            _ = self.layout.row()
-
-            _ = self.layout.row()
-
-            tab_layout = self.layout.row()
-
-            for _, child in enumerate(root_children):
-                if isinstance(child, SimpleContainer):
-                    child.draw_on_panel(tab_layout, context, self)
+            ###############################
+            # draw tab layout
+            ###############################
+            if not context.scene.rpde_magicAction:
+                tab_layout = self.layout.row()
+                for _, child in enumerate(root_children):
+                    if isinstance(child, SimpleContainer):
+                        child.draw_on_panel(tab_layout, context, self)
 
             _ = self.layout.row()
 
         except Exception:
             print("ERROR: Could not draw UI Components of RapidPipeline Blender Plugin.")
             bpy.types.Scene.rpde_UI_error = True
+            import traceback
+            traceback.print_stack()
+            traceback.print_exc()
+
+    def getExecutionButtons(self, layout:bpy.types.UILayout) -> None:
+        pcoll = preview_collections["main"]
+        load_icon = pcoll["load"]
+        save_icon = pcoll["save"]
+        defaults_icon = pcoll["defaults"]
+        layout.scale_y = 1
+        layout.operator(LoadOperator.bl_idname, icon_value=load_icon.icon_id, text="Load Preset")
+        layout.operator(SaveOperator.bl_idname, icon_value=save_icon.icon_id, text="Save Preset")
+        layout.operator(DefaultsOperator.bl_idname, icon_value=defaults_icon.icon_id, text="Defaults")
+
+    def getMagicActions(self, layout:bpy.types.UILayout, context:bpy.types.Context):
+        dirname = os.path.dirname(__file__)
+        if os.path.isdir(os.path.join(dirname, 'magic-actions')):
+
+            layout = self.layout.box()
+            layout.label(text="Preview of upcoming Magic Actions feature")
+            layout.label(text="Use Magic Actions for a quick workflow:")
+            layout.prop(context.scene.magic_action_property, "dropdown_selection")
+            if context.scene.magic_action_property.dropdown_selection == "Choose a Magic Action":
+                if context.scene.magic_action_property.warning_msg:
+                    layout.label(text=context.scene.magic_action_property.warning_msg, icon='ERROR')
+
+            if magic_actions_options:
+                layout.separator()
+
+            for option in magic_actions_options:
+                attribute_env, attribute = blend_scene_getattr(
+                    context.scene, "magic_action", uuid_dict={}, path=option.option_path)
+
+                layout.label(text=option.ui_element.parent_element.title)
+                blend_create_prop(layout, attribute_env, attribute, name=option.ui_element.title)
+
+            _ = self.layout.row()
+            _ = self.layout.row()
+
 
     def getLevelSelection(self, main_layout: bpy.types.UILayout, context:bpy.types.Context):
         """
@@ -834,22 +409,6 @@ class MainPanel(bpy.types.Panel):
         expert_level.level = 'expert'
 
 
-    def levelButtonChanged(self):
-        """
-        Callback to hide or display elements according to their setting level, and update elements.
-        """
-
-        def levelToIndex(lvl_str: str) -> int:
-            if lvl_str not in ProcessorPlugin.LEVELS:
-                lvl_str = ProcessorPlugin.LEVELS[0]
-            return ProcessorPlugin.LEVELS.index(lvl_str)
-
-    def onDestroy(self):
-        print("Cleaning up resources...")
-        if os.path.isfile(ProcessorLicense.TEMP_LICENSE_FILE):
-            os.remove(ProcessorLicense.TEMP_LICENSE_FILE)
-
-
 clss = (MainPanel, BooleanPropertyGroup,
         IntegerPropertyGroup, FloatPropertyGroup, LevelOperator, ColorPropertyGroup,
         LoadOperator, SaveOperator, DefaultsOperator, HelpOperator, RunOperator,
@@ -864,7 +423,7 @@ reg, unreg = bpy.utils.register_classes_factory(clss)
 late_reg, late_unreg = bpy.utils.register_classes_factory(late_reg_clss)
 
 
-def drawUIError(panel, context):
+def drawUIError(panel:bpy.types.Panel, context:bpy.types.Context):
         error_layout = panel.layout.row()
         error_msg = """ERROR: Could not draw UI Components of RapidPipeline Blender Plugin. \n
         Please try to restart the RapidPipeline Plugin or contact Customer Support."""
@@ -873,7 +432,7 @@ def drawUIError(panel, context):
         error_layout.operator(RestartUIOperator.bl_idname, text="Restart")
 
 #https://blender.stackexchange.com/questions/74052/wrap-text-within-a-panel
-def prettyPrint(panel, text:str, context:bpy.types.Context):
+def prettyPrint(panel:bpy.types.Panel, text:str, context:bpy.types.Context):
     for area in bpy.context.screen.areas:
         if area.type == 'VIEW_3D':
             break
@@ -896,8 +455,8 @@ def prettyPrint(panel, text:str, context:bpy.types.Context):
             panel.layout.label(text=chunk)
 
 def create_subpanel(path:List[str], parent_panel:str, schema:dict, display_header:bool) -> GroupPanel:
-    set_uuid(uuid_paths, set(path))
-    id = f"VIEW3D_PT_Subpanel{get_uuid(uuid_paths, path).replace('-', '')}"
+    set_uuid(set(path))
+    id = f"VIEW3D_PT_Subpanel{get_uuid(path).replace('-', '')}"
     header = {'HIDE_HEADER'} if not display_header else set()
     if id:
         if not hasattr(bpy.types, id):
@@ -916,7 +475,7 @@ def create_subpanel(path:List[str], parent_panel:str, schema:dict, display_heade
 def add_ui_element_to_panel(path:List[str], panel:GroupPanel):
     if panel.bl_idname != "VIEW3D_PT_RapidPipeline":
         try:
-            ui_element:UIElement = get_ui_elements_dict()[get_uuid(uuid_paths, path)]
+            ui_element:UIElement = get_ui_elements_dict()[get_uuid(path)]
         except Exception:
             ui_element:UIElement = None
         if ui_element:
@@ -928,8 +487,12 @@ def add_parent_to_panel(in_path:List[str], panel:GroupPanel, schema_key:str):
     if schema_key:
         path = in_path.copy()
         try:
-            ui_element:UIElement = get_ui_elements_dict()[get_uuid(uuid_paths, path)]
+            ui_element:UIElement = get_ui_elements_dict()[get_uuid(path)]
         except Exception:
+            import traceback
+            traceback.print_stack()
+            traceback.print_exc()
+
             print("Error could not find ui element to add to panel")
             ui_element:UIElement = None
         if ui_element:
@@ -950,7 +513,6 @@ def setup_properties(schema: dict,
 
     if not parent_panel:
         parent_panel = create_subpanel(path, MainPanel.bl_idname, schema, display_header=False)
-#        add_parent_to_panel(path, parent_panel, schema_key)
     temp_path = path.copy()
     attribute_id = schema.get("settingid", "settingid_not_found")
 
@@ -981,7 +543,7 @@ def setup_properties(schema: dict,
                     bpy.types.Scene, attribute_id, property_group=IntegerPropertyGroup, path=path,
                     value_function=bpy.props.IntProperty(
                         default=schema['default'], min=schema.get('minimum', 0.0),
-                        max=schema.get('maximum', 1_000_000), description=schema.get("description", "")),
+                        max=schema.get('maximum', 100_000_000), description=schema.get("description", "")),
                     uuid_dict=uuid_paths, toggable=('toggleable' in schema))
                 add_ui_element_to_panel(path, parent_panel)
             if schema['type'] == 'string':
@@ -1089,36 +651,33 @@ def setup_properties(schema: dict,
 def setup_icons():
     pcoll = bpy.utils.previews.new()
     dirname = os.path.dirname(__file__)
-    rapid_pipeline_icon_dir = os.path.join(dirname, 'resources', 'images', 'Icon_solid_green.png')
-    edit_icon_dir =           os.path.join(dirname, 'resources', 'images', '3dEdit.svg')
-    import_icon_dir =         os.path.join(dirname, 'resources', 'images', 'import.svg')
-    scene_graph_icon_dir =    os.path.join(dirname, 'resources', 'images', 'sceneGraphFlattening.svg')
-    mesh_culling_icon_dir =   os.path.join(dirname, 'resources', 'images', 'meshCulling.svg')
-    optimize_icon_dir =       os.path.join(dirname, 'resources', 'images', 'optimize.svg')
-    modifier_icon_dir =       os.path.join(dirname, 'resources', 'images', 'outcomeModifier.svg')
-    export_icon_dir =         os.path.join(dirname, 'resources', 'images', 'exportArray.svg')
-    load_icon_dir =           os.path.join(dirname, 'resources', 'images', 'load.svg')
-    save_icon_dir =           os.path.join(dirname, 'resources', 'images', 'save.svg')
-    defaults_icon_dir =       os.path.join(dirname, 'resources', 'images', 'restore.svg')
-    help_icon_dir =           os.path.join(dirname, 'resources', 'images', 'help.svg')
-    about_icon_dir =          os.path.join(dirname, 'resources', 'images', 'info.svg')
-    run_icon_dir =            os.path.join(dirname, 'resources', 'images', 'run.svg')
+    icons_dict = {
+        "rapidPipeline" : 'Icon_solid_green.png',
+        "edit" : '3dEdit.svg',
+        "import" : 'import.svg',
+        "sceneGraphFlattening" : 'sceneGraphFlattening.svg',
+        "meshCulling" : 'meshCulling.svg',
+        "optimize" : 'optimize.svg',
+        "modifier" : 'outcomeModifier.svg',
+        "export" : 'exportArray.svg',
+        "load" : 'load.svg',
+        "save" : 'save.svg',
+        "defaults" : 'restore.svg',
+        "help" : 'help.svg',
+        "about" : 'info.svg',
+        "run" : 'run.svg'
+    }
+    for file, file_name in icons_dict.items():
+        icon_dir = os.path.join(dirname, 'resources', 'images', file_name)
+        pcoll.load(file, icon_dir, 'IMAGE')
 
-    pcoll.load("rapidPipeline", rapid_pipeline_icon_dir, 'IMAGE')
-    pcoll.load("edit", edit_icon_dir, 'IMAGE')
-    pcoll.load("import", import_icon_dir, 'IMAGE')
-    pcoll.load("sceneGraphFlattening", scene_graph_icon_dir, 'IMAGE')
-    pcoll.load("meshCulling", mesh_culling_icon_dir, 'IMAGE')
-    pcoll.load("optimize", optimize_icon_dir, 'IMAGE')
-    pcoll.load("modifier", modifier_icon_dir, 'IMAGE')
-    pcoll.load("export", export_icon_dir, 'IMAGE')
-
-    pcoll.load("load", load_icon_dir, 'IMAGE')
-    pcoll.load("save", save_icon_dir, 'IMAGE')
-    pcoll.load("defaults", defaults_icon_dir, 'IMAGE')
-    pcoll.load("help", help_icon_dir, 'IMAGE')
-    pcoll.load("about", about_icon_dir, 'IMAGE')
-    pcoll.load("run", run_icon_dir, 'IMAGE')
+    if os.path.isdir(os.path.join(dirname, 'magic-actions')):
+        magic_action_folder = os.path.join(dirname, 'magic-actions', 'actions')
+        for magic_action in os.listdir(magic_action_folder):
+            if os.path.isdir(os.path.join(magic_action_folder, magic_action)):
+                icon_dir = os.path.join(magic_action_folder, magic_action, 'icon-dark.svg')
+                pcoll.load(f"magic_action_{magic_action}", icon_dir, 'IMAGE')
+                setattr(bpy.types.Scene, f"magic_action_{magic_action}", pcoll[f"magic_action_{magic_action}"])
 
     preview_collections["main"] = pcoll
 
@@ -1147,7 +706,7 @@ def register():
     # we can not rely only on timers.register since it doesnt work on loading blender scenes
     global register_worked
     register_worked = False
-    def wait_for_late_register(dummy = None):
+    def wait_for_late_register(dummy = None):  # noqa: ANN001
         global register_worked
         if not register_worked:
             register_worked = True
@@ -1186,26 +745,31 @@ def register():
     bpy.types.Scene.rpde_percentage = bpy.props.IntProperty(default=0, min=0, max=100, step=1, subtype='PERCENTAGE')
     bpy.types.Scene.has_license = ProcessorLicense.performLicenseCheck(None)
     bpy.types.Scene.use_token_future_sessions = bpy.props.BoolProperty(
-        default=False, description="If checked, the current API Token will be saved to disk for future usage.")
+        default=False,
+        description="If checked, the current Authentication Token will be saved to disk for future usage.")
     bpy.types.Scene.t_and_c_agreed = bpy.props.BoolProperty(
-        default=False, description="If checked, you agree to the Terms and Conditions of RapidPipeline usage.")
+        default=False,
+        description="If checked, you agree to the Terms and Conditions of RapidPipeline usage.")
     bpy.types.Scene.api_token = bpy.props.StringProperty(default="")
     bpy.types.Scene.override_token = False
     bpy.types.Scene.rpde_running = False
     bpy.types.Scene.rpde_error = False
     bpy.types.Scene.rpde_cancel = False
     bpy.types.Scene.rpde_UI_error = False
+    bpy.types.Scene.rpde_magicAction = False
 
     # load_post is only called on blender startup
     # timers.register is used in case the plugin is installed without a blender restart
     # we can not rely only on timers.register since it doesnt work on loading blender scenes
     global late_registered
     late_registered = False
-    def wait_for_late_register(dummy = None):
+    def wait_for_late_register(dummy = None):  # noqa: ANN001
         global late_registered
         if not late_registered:
             late_registered = True
             late_reg()
+            # save Addon to userpref to activate directly
+            bpy.ops.wm.save_userpref()
 
     bpy.app.timers.register(wait_for_late_register, first_interval=0.2)
     bpy.app.handlers.load_post.append(wait_for_late_register)  #wait for context to be fully loaded
@@ -1221,9 +785,9 @@ def removeQuarantineFlagOnMac():
     command_arguments = ['xattr', '-d', 'com.apple.quarantine', "./rpde"]
     command_arguments2 = ['chmod', '+x', "./rpde"]
     print("Removing quarantine flag on Mac...")
-    print(command_arguments)    
+    print(command_arguments)
 
-    result2 = subprocess.run(
+    _ = subprocess.run(
             command_arguments2)
 
     result = subprocess.run(

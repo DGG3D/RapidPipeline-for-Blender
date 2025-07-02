@@ -27,17 +27,18 @@ rpde/EULA_RapidPipelineEngine.rtf after installation, or during the install
 process) for further information.
 """
 
+import base64
 import functools
+import hashlib
 import os
 import subprocess
-import hashlib
-import base64
 
 import bpy  # type: ignore
 
 from .gui_commons import ProcessorPlugin
 
 nodes = []
+suppressed_messages = ["batch processing", "cloud session"]
 
 class RunPipeline:
     @staticmethod
@@ -75,7 +76,7 @@ class RunPipeline:
 class ModalTimerOperator(bpy.types.Operator):
     """
     Operator which runs itself from a timer
-    Runns rpde on a modal timer to get the output of the rpde subprocess 
+    Runns rpde on a modal timer to get the output of the rpde subprocess
     reflected in the UI
     """
     bl_idname = "wm.modal_timer_operator"
@@ -96,7 +97,7 @@ class ModalTimerOperator(bpy.types.Operator):
             if context.scene.rpde_cancel:
                 self.result.kill()
                 bpy.types.Scene.rpde_cancel = False
-                print("cancle rpde")
+                print("cancel rpde")
                 bpy.ops.object.select_all(action='DESELECT')
                 for node in nodes:
                     bpy.data.objects[node.name].select_set(True)
@@ -110,23 +111,37 @@ class ModalTimerOperator(bpy.types.Operator):
                 rpde_error = ""
                 rpde_output = str(self.result.stdout.readline())
 
-                if "" != rpde_output:
-                    print(rpde_output)
-                    if "batch processing" not in rpde_output:
-                        self.full_log += (rpde_output)
-
                 if rpde_output and len(rpde_output) > 1:
+                    print(rpde_output)
                     # displays the percentage status of rpde
                     if '% [' in rpde_output:
                         bpy.types.Scene.rpde_output = self.value
                         context.scene.rpde_percentage = int(rpde_output.split('%')[0])
+                    # display other messages
                     else:
-                        bpy.types.Scene.rpde_output = rpde_output
-                        self.value = rpde_output
+                        suppress_msg = False
+                        for msg_part in suppressed_messages:
+                            if msg_part in rpde_output:
+                                suppress_msg = True
+                        if not suppress_msg:
+                            bpy.types.Scene.rpde_output = rpde_output
+                            self.value = rpde_output
                     context.area.tag_redraw()
 
+                # rpde execution finished:
                 if self.subprocess_poll is not None:
+                    # rpde not successful:
                     if self.subprocess_poll != 0:
+                        # log last output
+                        if "" != rpde_output:
+                            suppress_msg = False
+                            for msg_part in suppressed_messages:
+                                if msg_part in rpde_output:
+                                    suppress_msg = True
+                            if not suppress_msg:
+                                self.full_log += (rpde_output)
+
+                        # log last error
                         rpde_error = str(self.result.stderr.readline())
                         if "" != rpde_error:
                             print(rpde_error)
@@ -135,6 +150,7 @@ class ModalTimerOperator(bpy.types.Operator):
                         bpy.types.Scene.rpde_output = self.full_log
                         context.area.tag_redraw()
                         return {'FINISHED'}
+                    # rpde successful:
                     else:
                         print("close session")
                         bpy.app.timers.register(functools.partial(self.close_rpde_session, context), first_interval=1)

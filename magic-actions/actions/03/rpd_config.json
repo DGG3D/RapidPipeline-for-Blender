@@ -1,0 +1,42 @@
+{
+    "export": [
+      {
+        "preserveTextureFilenames": false,
+        "reencodeTextures": "auto",
+        "format": {
+          "glb": {}
+        }
+      },
+      {
+        "preserveTextureFilenames": false,
+        "reencodeTextures": "auto",
+        "discard": {
+          "unusedUVs": false,
+          "emptyNodes": false
+        },
+        "format": {
+          "fbx": {}
+        }
+      }
+    ],
+    "optimize": {
+      "3dModelOptimizationMethod": {
+        "onlyMaterial": {
+          "materialMerger": {
+            "materialRegenerator": {
+              "uvAtlasGenerator": {
+                "packingResolution": 1024,
+                "atlasFactor": 1,
+                "textureBaker": {
+                  "bakingResolution": {
+                    "default": 2048 
+                  }
+                }
+              }
+            },
+            "keepTiledUVs": false 
+          }
+        }
+      }
+    }
+  }

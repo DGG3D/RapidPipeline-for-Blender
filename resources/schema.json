@@ -1,7 +1,16 @@
 {
   "title": "RapidPipeline 3D Processing Schema",
-  "version": "7.0",
+  "version": "1.3",
   "properties": {
+    "version": {
+      "type": "number",
+      "level": "basic",
+      "settingid": "processorSchemaVersion",
+      "default": 0,
+      "title": "3D Processor Schema Version",
+      "description": "Required Schema Version for the given Configuration Settings",
+      "toggleable": false
+    },
     "import": {
       "properties": {
         "general": {
@@ -19,7 +28,7 @@
               "type": "boolean",
               "level": "advanced",
               "settingid": "import:fixAnimationData",
-              "default": false,
+              "default": true,
               "title": "Clean Up Animation Data",
               "description": "cleans up weights so they sum up to 1 and assigns bone 0 for 0-weights",
               "toggleable": false
@@ -88,6 +97,26 @@
               "title": "Tessellation Resolution",
               "description": "Tessellation resolution for imported CAD surfaces",
               "toggleable": false
+            },
+            "removeTJunctions": {
+              "type": "boolean",
+              "level": "expert",
+              "settingid": "import:cadMeshRemoveTJunctions",
+              "default": false,
+              "title": "CAD Remove T-Junctions",
+              "description": "Attempts to remove T-Junctions after CAD tessellation (experimental)",
+              "toggleable": false
+            },
+            "sewTolerance": {
+              "type": "number",
+              "level": "advanced",
+              "settingid": "import:cadSewTolerance",
+              "minimum": 0.0,
+              "maximum": 1.7976931348623157e+308,
+              "default": 0.0,
+              "title": "CAD Sewing Tolerance",
+              "description": "Tolerance for the sewing operation on the b-reps before tessellation",
+              "toggleable": false
             }
           },
           "additionalProperties": false,
@@ -153,6 +182,77 @@
           "title": "Discard Properties on Import",
           "description": "Properties of a 3D asset to discard on import.",
           "toggleable": true
+        },
+        "materials": {
+          "properties": {
+            "undefinedDefaults": {
+              "properties": {
+                "baseColor": {
+                  "type": "array",
+                  "level": "basic",
+                  "settingid": "import:defaultBaseColor",
+                  "items": {
+                    "type": "number",
+                    "level": "basic",
+                    "settingid": "baseColorChannel1",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 1,
+                    "title": "Base Color Channel",
+                    "description": "default material base color channel",
+                    "toggleable": false
+                  },
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "default": [
+                    1,
+                    1,
+                    1,
+                    1
+                  ],
+                  "title": "Import Default Base Color",
+                  "description": "default base color values, applied on import if the material model doesn't define a default base color values already",
+                  "toggleable": false
+                },
+                "metallic": {
+                  "type": "number",
+                  "level": "basic",
+                  "settingid": "import:defaultMetallic",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0,
+                  "title": "Import Default Metallic",
+                  "description": "default metallic value, applied on import if the material model doesn't define a default metallic value already",
+                  "toggleable": false
+                },
+                "roughness": {
+                  "type": "number",
+                  "level": "basic",
+                  "settingid": "import:defaultRoughness",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.5,
+                  "title": "Import Default Roughness",
+                  "description": "default roughness value, applied on import if the material model doesn't define a default roughness value already",
+                  "toggleable": false
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "level": "basic",
+              "settingid": "import:materialDefaults",
+              "title": "Import Material Defaults",
+              "description": "default material properties, applied on import if the material model doesn't define a default properties already",
+              "toggleable": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "level": "basic",
+          "settingid": "import:materials",
+          "title": "Import Material Settings",
+          "description": "Settings applied to imported materials",
+          "toggleable": false
         }
       },
       "additionalProperties": false,
@@ -257,13 +357,29 @@
               "description": "asset scaling before export, does not affect asset for further processing",
               "toggleable": false
             },
-            "centerModel": {
-              "type": "boolean",
-              "level": "advanced",
-              "settingid": "modelEdit:center",
-              "default": false,
-              "title": "Center Model",
-              "description": "centers the model around the coordinate origin before export",
+            "centering": {
+              "properties": {
+                "mode": {
+                  "enum": [
+                    "center",
+                    "rearCenter",
+                    "bottomCenter",
+                    "topCenter"
+                  ],
+                  "level": "advanced",
+                  "settingid": "modelEdit:centerMode",
+                  "default": "center",
+                  "title": "Center Model Mode",
+                  "description": "model center modes to center around the coordinate origin or other positions before export",
+                  "toggleable": false
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "level": "basic",
+              "settingid": "modelEdit:centerObject",
+              "title": "Center Object",
+              "description": "Option to center the model according to given settings",
               "toggleable": false
             }
           },
@@ -302,7 +418,7 @@
                                       "maximum": 1.7976931348623157e+308,
                                       "default": 1.0,
                                       "title": "Cube UV Scale",
-                                      "description": "TBD",
+                                      "description": "scale factor for the cube unwrapping method",
                                       "toggleable": false
                                     }
                                   },
@@ -561,7 +677,10 @@
                           "settingid": "dropTextures:opacity",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Opacity Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform opacity maps",
+                          "toggleable": false
                         },
                         "normal": {
                           "type": "number",
@@ -646,7 +765,10 @@
                           "settingid": "dropTextures:clearcoatColor",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Clearcoat Color Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform clearcoat color maps",
+                          "toggleable": false
                         },
                         "clearcoatRoughness": {
                           "type": "number",
@@ -665,7 +787,10 @@
                           "settingid": "dropTextures:clearcoatSpecularLevel",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Clearcoat Specular Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform clearcoat specular maps",
+                          "toggleable": false
                         },
                         "clearcoatNormal": {
                           "type": "number",
@@ -706,7 +831,10 @@
                           "settingid": "dropTextures:attenuationColor",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Attenuation Color Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform attenuation color maps",
+                          "toggleable": false
                         },
                         "scatteringColor": {
                           "type": "number",
@@ -714,7 +842,10 @@
                           "settingid": "dropTextures:scatteringColor",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Scattering Color Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform scattering color maps",
+                          "toggleable": false
                         },
                         "scatteringDistanceScale": {
                           "type": "number",
@@ -722,7 +853,10 @@
                           "settingid": "dropTextures:scatteringDistanceScale",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Anisotropy Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform anisotropy maps",
+                          "toggleable": false
                         },
                         "sheenColor": {
                           "type": "number",
@@ -752,7 +886,10 @@
                           "settingid": "dropTextures:sheenOpacity",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Sheen Opacity Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform sheen opacity maps",
+                          "toggleable": false
                         },
                         "specularColor": {
                           "type": "number",
@@ -782,7 +919,10 @@
                           "settingid": "dropTextures:anisotropy",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Anisotropy Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform anisotropy maps",
+                          "toggleable": false
                         },
                         "anisotropyAngle": {
                           "type": "number",
@@ -790,7 +930,10 @@
                           "settingid": "dropTextures:anisotropyAngle",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Anisotropy Angle Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform anisotropy angle maps",
+                          "toggleable": false
                         },
                         "iridescence": {
                           "type": "number",
@@ -846,7 +989,7 @@
               "default": 1,
               "title": "Alpha Blend to Mask Conversion Threshold",
               "description": "use alpha masking instead of blending when the alpha map has same or more than the given fraction of black or white pixels",
-              "toggleable": false
+              "toggleable": true
             },
             "alphaMapToOpaqueThreshold": {
               "type": "number",
@@ -857,7 +1000,7 @@
               "default": 1,
               "title": "Alpha Blend to Opaque Conversion Threshold",
               "description": "consider the material opaque if the alpha map mean value is above the given value [0, 1]",
-              "toggleable": false
+              "toggleable": true
             }
           },
           "additionalProperties": false,
@@ -866,6 +1009,113 @@
           "settingid": "materialEdit",
           "title": "Material Edit",
           "description": "Settings applied to the Materials of a 3D asset",
+          "toggleable": true
+        },
+        "repair": {
+          "properties": {
+            "vertexMerging": {
+              "properties": {
+                "mergeDistance": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "percentage": {
+                          "type": "number",
+                          "level": "basic",
+                          "settingid": "vertexMergingDistPct",
+                          "minimum": 0,
+                          "maximum": 100,
+                          "default": 0.005,
+                          "title": "Vertex Merging Distance Percentage",
+                          "description": "Percentage Distance for Vertex Merging",
+                          "toggleable": false
+                        }
+                      },
+                      "settingid": "vertexMergingDistance_percentage",
+                      "title": "Vertex Merging Distance Percentage",
+                      "description": "Percentage Distance for Vertex Merging",
+                      "toggleable": false
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "value": {
+                          "type": "number",
+                          "level": "basic",
+                          "settingid": "vertexMergingDistValue",
+                          "minimum": 2.2250738585072014e-308,
+                          "maximum": 1.7976931348623157e+308,
+                          "default": 2.2250738585072014e-308,
+                          "title": "Vertex Merging Distance Value",
+                          "description": "Distance Value for Vertex Merging",
+                          "toggleable": false
+                        }
+                      },
+                      "settingid": "vertexMergingDistance_value",
+                      "title": "Vertex Merging Distance Value",
+                      "description": "Distance Value for Vertex Merging",
+                      "toggleable": false
+                    }
+                  ],
+                  "type": "object",
+                  "level": "basic",
+                  "settingid": "vertexMergingDistance",
+                  "title": "Vertex Merging Distance",
+                  "description": "Distance for the vertex merging operation",
+                  "toggleable": false
+                },
+                "perMesh": {
+                  "type": "boolean",
+                  "level": "advanced",
+                  "settingid": "vertexMergingPerMesh",
+                  "default": false,
+                  "title": "Vertex Merging Per Mesh",
+                  "description": "Decides if vertex merging should run on a per mesh basis",
+                  "toggleable": false
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "mergeDistance"
+              ],
+              "type": "object",
+              "level": "basic",
+              "settingid": "vertexMerging",
+              "title": "Vertex Merging",
+              "description": "Merges input models close vertices with a given threshold",
+              "toggleable": true
+            },
+            "windingOrder": {
+              "properties": {
+                "visibilityMode": {
+                  "enum": [
+                    "default",
+                    "mesh"
+                  ],
+                  "level": "advanced",
+                  "settingid": "windingOrder:visibilityMode",
+                  "default": "default",
+                  "title": "Visibility Mode",
+                  "description": "Set how visibility is computed",
+                  "toggleable": false
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "level": "basic",
+              "settingid": "fixWindingOrder",
+              "title": "Fix Winding Order",
+              "description": "Automatically fip the winding order of triangles or parts (mesh lumps) according to certain metrics",
+              "toggleable": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "level": "basic",
+          "settingid": "repair",
+          "title": "Repair",
+          "description": "Category for repairing specific properties of a model",
           "toggleable": true
         }
       },
@@ -932,6 +1182,15 @@
               "default": "none",
               "title": "Visibility Diffusion",
               "description": "control if neighbours of visible triangles are also flagged as visible",
+              "toggleable": false
+            },
+            "sampleEdges": {
+              "type": "boolean",
+              "level": "expert",
+              "settingid": "visibility:sampleEdges",
+              "default": true,
+              "title": "Sample Edges",
+              "description": "Defines if edges should be sampled during visibility computation",
               "toggleable": false
             }
           },
@@ -1089,6 +1348,55 @@
                                   "description": "Face Targets for the Decimation Operation",
                                   "toggleable": false
                                 },
+                                "vertices": {
+                                  "oneOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "percentage": {
+                                          "type": "number",
+                                          "level": "basic",
+                                          "settingid": "decimatorVerticesPercentage",
+                                          "minimum": 0,
+                                          "maximum": 100,
+                                          "default": 100,
+                                          "title": "Vertices Percentage",
+                                          "description": "Vertices Percentage target relative to the input data",
+                                          "toggleable": false
+                                        }
+                                      },
+                                      "settingid": "decimatorVerticesTarget_percentage",
+                                      "title": "Vertices Percentage",
+                                      "description": "Vertices Percentage target relative to the input data",
+                                      "toggleable": false
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "value": {
+                                          "type": "integer",
+                                          "level": "basic",
+                                          "settingid": "decimatorVerticesValue",
+                                          "minimum": 1,
+                                          "default": 1,
+                                          "title": "Vertices Value",
+                                          "description": "Faces Value target in vertices",
+                                          "toggleable": false
+                                        }
+                                      },
+                                      "settingid": "decimatorVerticesTarget_value",
+                                      "title": "Vertices Value",
+                                      "description": "Faces Value target in vertices",
+                                      "toggleable": false
+                                    }
+                                  ],
+                                  "type": "object",
+                                  "level": "basic",
+                                  "settingid": "decimatorVerticesTarget",
+                                  "title": "Vertices",
+                                  "description": "Vertices Targets for the Decimation Operation",
+                                  "toggleable": true
+                                },
                                 "deviation": {
                                   "oneOf": [
                                     {
@@ -1148,7 +1456,7 @@
                               "toggleable": false
                             },
                             "materialOptimization": {
-                              "$ref": "#/$defs/__ref_170__"
+                              "$ref": "#/$defs/__ref_188__"
                             },
                             "preserveTopology": {
                               "type": "boolean",
@@ -1302,6 +1610,55 @@
                                   "title": "Faces",
                                   "description": "Face Targets for the Decimation Operation after the initial Remeshing",
                                   "toggleable": false
+                                },
+                                "vertices": {
+                                  "oneOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "percentage": {
+                                          "type": "number",
+                                          "level": "basic",
+                                          "settingid": "remesherVerticesPercentage",
+                                          "minimum": 0,
+                                          "maximum": 100,
+                                          "default": 100,
+                                          "title": "Vertices Percentage",
+                                          "description": "Vertices Percentage target relative to the input data",
+                                          "toggleable": false
+                                        }
+                                      },
+                                      "settingid": "remesherVerticesTarget_percentage",
+                                      "title": "Vertices Percentage",
+                                      "description": "Vertices Percentage target relative to the input data",
+                                      "toggleable": false
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "value": {
+                                          "type": "integer",
+                                          "level": "basic",
+                                          "settingid": "remesherVerticesValue",
+                                          "minimum": 1,
+                                          "default": 1,
+                                          "title": "Vertices Value",
+                                          "description": "Faces Value target in vertices",
+                                          "toggleable": false
+                                        }
+                                      },
+                                      "settingid": "remesherVerticesTarget_value",
+                                      "title": "Vertices Value",
+                                      "description": "Faces Value target in vertices",
+                                      "toggleable": false
+                                    }
+                                  ],
+                                  "type": "object",
+                                  "level": "basic",
+                                  "settingid": "remesherVerticesTarget",
+                                  "title": "Vertices",
+                                  "description": "Vertices Targets for the Decimation Operation after the initial Remeshing",
+                                  "toggleable": true
                                 }
                               },
                               "additionalProperties": false,
@@ -1315,7 +1672,7 @@
                             "materialMerger": {
                               "properties": {
                                 "materialRegenerator": {
-                                  "$ref": "#/$defs/__ref_153__"
+                                  "$ref": "#/$defs/__ref_171__"
                                 },
                                 "materialMergingMethod": {
                                   "enum": [
@@ -1362,6 +1719,15 @@
                               "title": "Resolution",
                               "description": "maximum tree depth (resolution) for the initial remeshing process (0=auto)",
                               "toggleable": false
+                            },
+                            "filterBackProjected": {
+                              "type": "boolean",
+                              "level": "basic",
+                              "settingid": "remeshing:filterBackProjected",
+                              "default": false,
+                              "title": "Filter Backside",
+                              "description": "Filters out any backsides during remeshing",
+                              "toggleable": false
                             }
                           },
                           "additionalProperties": false,
@@ -1400,7 +1766,7 @@
               "additionalProperties": false,
               "properties": {
                 "onlyMaterial": {
-                  "$ref": "#/$defs/__ref_170__"
+                  "$ref": "#/$defs/__ref_188__"
                 }
               },
               "settingid": "modelOptimizationMethod_onlyMaterial",
@@ -1499,6 +1865,20 @@
                   "title": "Pixel Target",
                   "description": "Target size on screen in pixel (width and height)",
                   "toggleable": false
+                },
+                "powerOfTwoResolution": {
+                  "enum": [
+                    "none",
+                    "ceil",
+                    "floor",
+                    "round"
+                  ],
+                  "level": "expert",
+                  "settingid": "compact:powerOfTwoTextures",
+                  "default": "ceil",
+                  "title": "Power of Two Resolution",
+                  "description": "ensures that textures have power of two dimensions",
+                  "toggleable": false
                 }
               },
               "additionalProperties": false,
@@ -1582,6 +1962,15 @@
                 "default": false,
                 "title": "Discard unused UVs",
                 "description": "Discards UV coordinates which are not used by any material(s)",
+                "toggleable": false
+              },
+              "emptyNodes": {
+                "type": "boolean",
+                "level": "expert",
+                "settingid": "export:discardEmptyNodes",
+                "default": false,
+                "title": "Discard empty nodes",
+                "description": "Discards empty nodes",
                 "toggleable": false
               }
             },
@@ -2555,7 +2944,7 @@
                         "level": "basic",
                         "settingid": "objExportMtl",
                         "title": "OBJ Material",
-                        "description": "TBD",
+                        "description": "Settings for the Wavefront OBJ material - on export expressed as separate .mtl file",
                         "toggleable": false
                       },
                       "preferredUVChannel": {
@@ -2574,13 +2963,13 @@
                     "level": "basic",
                     "settingid": "objExport",
                     "title": "OBJ Format",
-                    "description": "TBD",
+                    "description": "Writes out and sets settings for the Wavefront Object Format - obj",
                     "toggleable": false
                   }
                 },
                 "settingid": "exportFormat_obj",
                 "title": "OBJ Format",
-                "description": "TBD",
+                "description": "Writes out and sets settings for the Wavefront Object Format - obj",
                 "toggleable": false
               },
               {
@@ -2589,7 +2978,7 @@
                   "ply": {
                     "properties": {
                       "defaultMaterial": {
-                        "$ref": "#/$defs/__ref_210__"
+                        "$ref": "#/$defs/__ref_236__"
                       },
                       "preferBinaryFormat": {
                         "type": "boolean",
@@ -2606,13 +2995,13 @@
                     "level": "basic",
                     "settingid": "plyExport",
                     "title": "PLY Format",
-                    "description": "TBD",
+                    "description": "Writes out and sets settings for the PLY Format",
                     "toggleable": false
                   }
                 },
                 "settingid": "exportFormat_ply",
                 "title": "PLY Format",
-                "description": "TBD",
+                "description": "Writes out and sets settings for the PLY Format",
                 "toggleable": false
               },
               {
@@ -2621,7 +3010,7 @@
                   "ctm": {
                     "properties": {
                       "defaultMaterial": {
-                        "$ref": "#/$defs/__ref_210__"
+                        "$ref": "#/$defs/__ref_236__"
                       }
                     },
                     "additionalProperties": false,
@@ -2629,13 +3018,13 @@
                     "level": "basic",
                     "settingid": "ctmExport",
                     "title": "CTM Format",
-                    "description": "TBD",
+                    "description": "Writes out and sets settings for the CTM Format",
                     "toggleable": false
                   }
                 },
                 "settingid": "exportFormat_ctm",
                 "title": "CTM Format",
-                "description": "TBD",
+                "description": "Writes out and sets settings for the CTM Format",
                 "toggleable": false
               },
               {
@@ -2648,13 +3037,13 @@
                     "level": "basic",
                     "settingid": "stlExport",
                     "title": "STL Format",
-                    "description": "TBD",
+                    "description": "Writes out and sets settings for the STL Format",
                     "toggleable": false
                   }
                 },
                 "settingid": "exportFormat_stl",
                 "title": "STL Format",
-                "description": "TBD",
+                "description": "Writes out and sets settings for the STL Format",
                 "toggleable": false
               }
             ],
@@ -2692,7 +3081,7 @@
   "level": "basic",
   "settingid": "3dProcessor",
   "$defs": {
-    "__ref_162__": {
+    "__ref_180__": {
       "properties": {
         "default": {
           "type": "number",
@@ -2722,7 +3111,10 @@
           "settingid": "dropTextures:opacity",
           "minimum": 0,
           "maximum": 1,
-          "default": 0
+          "default": 0,
+          "title": "Opacity Map Threshold",
+          "description": "Threshold for dropping nearly-uniform opacity maps",
+          "toggleable": false
         },
         "normal": {
           "type": "number",
@@ -2807,7 +3199,10 @@
           "settingid": "dropTextures:clearcoatColor",
           "minimum": 0,
           "maximum": 1,
-          "default": 0
+          "default": 0,
+          "title": "Clearcoat Color Map Threshold",
+          "description": "Threshold for dropping nearly-uniform clearcoat color maps",
+          "toggleable": false
         },
         "clearcoatRoughness": {
           "type": "number",
@@ -2826,7 +3221,10 @@
           "settingid": "dropTextures:clearcoatSpecularLevel",
           "minimum": 0,
           "maximum": 1,
-          "default": 0
+          "default": 0,
+          "title": "Clearcoat Specular Map Threshold",
+          "description": "Threshold for dropping nearly-uniform clearcoat specular maps",
+          "toggleable": false
         },
         "clearcoatNormal": {
           "type": "number",
@@ -2867,7 +3265,10 @@
           "settingid": "dropTextures:attenuationColor",
           "minimum": 0,
           "maximum": 1,
-          "default": 0
+          "default": 0,
+          "title": "Attenuation Color Map Threshold",
+          "description": "Threshold for dropping nearly-uniform attenuation color maps",
+          "toggleable": false
         },
         "scatteringColor": {
           "type": "number",
@@ -2875,7 +3276,10 @@
           "settingid": "dropTextures:scatteringColor",
           "minimum": 0,
           "maximum": 1,
-          "default": 0
+          "default": 0,
+          "title": "Scattering Color Map Threshold",
+          "description": "Threshold for dropping nearly-uniform scattering color maps",
+          "toggleable": false
         },
         "scatteringDistanceScale": {
           "type": "number",
@@ -2883,7 +3287,10 @@
           "settingid": "dropTextures:scatteringDistanceScale",
           "minimum": 0,
           "maximum": 1,
-          "default": 0
+          "default": 0,
+          "title": "Anisotropy Map Threshold",
+          "description": "Threshold for dropping nearly-uniform anisotropy maps",
+          "toggleable": false
         },
         "sheenColor": {
           "type": "number",
@@ -2913,7 +3320,10 @@
           "settingid": "dropTextures:sheenOpacity",
           "minimum": 0,
           "maximum": 1,
-          "default": 0
+          "default": 0,
+          "title": "Sheen Opacity Map Threshold",
+          "description": "Threshold for dropping nearly-uniform sheen opacity maps",
+          "toggleable": false
         },
         "specularColor": {
           "type": "number",
@@ -2943,7 +3353,10 @@
           "settingid": "dropTextures:anisotropy",
           "minimum": 0,
           "maximum": 1,
-          "default": 0
+          "default": 0,
+          "title": "Anisotropy Map Threshold",
+          "description": "Threshold for dropping nearly-uniform anisotropy maps",
+          "toggleable": false
         },
         "anisotropyAngle": {
           "type": "number",
@@ -2951,7 +3364,10 @@
           "settingid": "dropTextures:anisotropyAngle",
           "minimum": 0,
           "maximum": 1,
-          "default": 0
+          "default": 0,
+          "title": "Anisotropy Angle Map Threshold",
+          "description": "Threshold for dropping nearly-uniform anisotropy angle maps",
+          "toggleable": false
         },
         "iridescence": {
           "type": "number",
@@ -2984,7 +3400,7 @@
       "description": "Use thresholds for dropping nearly-uniform texture maps",
       "toggleable": true
     },
-    "__ref_165__": {
+    "__ref_183__": {
       "properties": {
         "textureBaker2ndUV": {
           "properties": {
@@ -3269,7 +3685,7 @@
       "description": "Optionally add a UV Checker Texture",
       "toggleable": false
     },
-    "__ref_153__": {
+    "__ref_171__": {
       "oneOf": [
         {
           "additionalProperties": false,
@@ -3689,7 +4105,10 @@
                           "settingid": "bakingRes_iridescence",
                           "minimum": 0,
                           "maximum": 16384,
-                          "default": 2048
+                          "default": 2048,
+                          "title": "Iridescence Map Resolution",
+                          "description": "resolution for baked iridescence maps",
+                          "toggleable": true
                         },
                         "iridescenceThickness": {
                           "type": "integer",
@@ -3697,7 +4116,10 @@
                           "settingid": "bakingRes_iridescenceThickness",
                           "minimum": 0,
                           "maximum": 16384,
-                          "default": 2048
+                          "default": 2048,
+                          "title": "Iridescence Thickness Map Resolution",
+                          "description": "resolution for baked iridescence thickness maps",
+                          "toggleable": true
                         }
                       },
                       "additionalProperties": false,
@@ -3707,6 +4129,325 @@
                       "title": "Texture Baking Resolution",
                       "description": "Settings block within the Texture Baker to steer the baking resolution of supported texture maps",
                       "toggleable": true
+                    },
+                    "dropTextures": {
+                      "properties": {
+                        "default": {
+                          "type": "number",
+                          "level": "basic",
+                          "settingid": "dropTextures:default",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Default Texture Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform texture maps",
+                          "toggleable": false
+                        },
+                        "baseColor": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:baseColor",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Base Color Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform base color maps",
+                          "toggleable": false
+                        },
+                        "opacity": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:opacity",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Opacity Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform opacity maps",
+                          "toggleable": false
+                        },
+                        "normal": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:normal",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Normal Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform normal maps",
+                          "toggleable": false
+                        },
+                        "metallic": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:metallic",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Metallic Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform metallic maps",
+                          "toggleable": false
+                        },
+                        "roughness": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:roughness",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Roughness Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform roughness maps",
+                          "toggleable": false
+                        },
+                        "emissive": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:emissive",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Emissive Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform emissive maps",
+                          "toggleable": false
+                        },
+                        "occlusion": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:occlusion",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Ambient Occlusion Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform ambient occlusion maps",
+                          "toggleable": false
+                        },
+                        "displacement": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:displacement",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Displacement Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform displacement maps",
+                          "toggleable": false
+                        },
+                        "clearcoat": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:clearcoat",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Clearcoat Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform clearcoat maps",
+                          "toggleable": false
+                        },
+                        "clearcoatColor": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:clearcoatColor",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Clearcoat Color Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform clearcoat color maps",
+                          "toggleable": false
+                        },
+                        "clearcoatRoughness": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:clearcoatRoughness",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Clearcoat Roughness Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform clearcoat roughness maps",
+                          "toggleable": false
+                        },
+                        "clearcoatSpecularLevel": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:clearcoatSpecularLevel",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Clearcoat Specular Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform clearcoat specular maps",
+                          "toggleable": false
+                        },
+                        "clearcoatNormal": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:clearcoatNormal",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Clearcoat Normal Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform clearcoat normal maps",
+                          "toggleable": false
+                        },
+                        "transmission": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:transmission",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Transmission Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform transmission maps",
+                          "toggleable": false
+                        },
+                        "thickness": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:thickness",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Thickness Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform thickness maps",
+                          "toggleable": false
+                        },
+                        "attenuationColor": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:attenuationColor",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Attenuation Color Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform attenuation color maps",
+                          "toggleable": false
+                        },
+                        "scatteringColor": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:scatteringColor",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Scattering Color Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform scattering color maps",
+                          "toggleable": false
+                        },
+                        "scatteringDistanceScale": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:scatteringDistanceScale",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Anisotropy Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform anisotropy maps",
+                          "toggleable": false
+                        },
+                        "sheenColor": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:sheenColor",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Sheen Color Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform sheen color maps",
+                          "toggleable": false
+                        },
+                        "sheenRoughness": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:sheenRoughness",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Sheen Roughness Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform sheen roughness maps",
+                          "toggleable": false
+                        },
+                        "sheenOpacity": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:sheenOpacity",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Sheen Opacity Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform sheen opacity maps",
+                          "toggleable": false
+                        },
+                        "specularColor": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:specularColor",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Specular Color Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform specular color maps",
+                          "toggleable": false
+                        },
+                        "specularValue": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:specularValue",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Specular Value Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform specular value maps",
+                          "toggleable": false
+                        },
+                        "anisotropy": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:anisotropy",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Anisotropy Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform anisotropy maps",
+                          "toggleable": false
+                        },
+                        "anisotropyAngle": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:anisotropyAngle",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Anisotropy Angle Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform anisotropy angle maps",
+                          "toggleable": false
+                        },
+                        "iridescence": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:iridescence",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Iridescence Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform iridescence maps",
+                          "toggleable": false
+                        },
+                        "iridescenceThickness": {
+                          "type": "number",
+                          "level": "advanced",
+                          "settingid": "dropTextures:iridescenceThickness",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 0,
+                          "title": "Iridescence Thickness Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform iridescence thickness maps",
+                          "toggleable": false
+                        }
+                      },
+                      "additionalProperties": false,
+                      "type": "object",
+                      "level": "basic",
+                      "settingid": "dropTexturesBaker",
+                      "title": "Drop Uniform Texture Maps",
+                      "description": "Use thresholds for dropping nearly-uniform texture maps",
+                      "toggleable": false
                     },
                     "sampleCount": {
                       "type": "integer",
@@ -3919,7 +4660,7 @@
           },
           "settingid": "materialRegenerator_uvAtlasGenerator",
           "title": "Generate UV Atlas",
-          "description": "TBD",
+          "description": "Settings for generating new UV atlases",
           "toggleable": false
         },
         {
@@ -3950,7 +4691,7 @@
                                       "maximum": 1.7976931348623157e+308,
                                       "default": 1.0,
                                       "title": "Cube UV Scale",
-                                      "description": "TBD",
+                                      "description": "scale factor for the cube unwrapping method",
                                       "toggleable": false
                                     }
                                   },
@@ -4209,7 +4950,10 @@
                           "settingid": "dropTextures:opacity",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Opacity Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform opacity maps",
+                          "toggleable": false
                         },
                         "normal": {
                           "type": "number",
@@ -4294,7 +5038,10 @@
                           "settingid": "dropTextures:clearcoatColor",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Clearcoat Color Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform clearcoat color maps",
+                          "toggleable": false
                         },
                         "clearcoatRoughness": {
                           "type": "number",
@@ -4313,7 +5060,10 @@
                           "settingid": "dropTextures:clearcoatSpecularLevel",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Clearcoat Specular Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform clearcoat specular maps",
+                          "toggleable": false
                         },
                         "clearcoatNormal": {
                           "type": "number",
@@ -4354,7 +5104,10 @@
                           "settingid": "dropTextures:attenuationColor",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Attenuation Color Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform attenuation color maps",
+                          "toggleable": false
                         },
                         "scatteringColor": {
                           "type": "number",
@@ -4362,7 +5115,10 @@
                           "settingid": "dropTextures:scatteringColor",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Scattering Color Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform scattering color maps",
+                          "toggleable": false
                         },
                         "scatteringDistanceScale": {
                           "type": "number",
@@ -4370,7 +5126,10 @@
                           "settingid": "dropTextures:scatteringDistanceScale",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Anisotropy Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform anisotropy maps",
+                          "toggleable": false
                         },
                         "sheenColor": {
                           "type": "number",
@@ -4400,7 +5159,10 @@
                           "settingid": "dropTextures:sheenOpacity",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Sheen Opacity Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform sheen opacity maps",
+                          "toggleable": false
                         },
                         "specularColor": {
                           "type": "number",
@@ -4430,7 +5192,10 @@
                           "settingid": "dropTextures:anisotropy",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Anisotropy Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform anisotropy maps",
+                          "toggleable": false
                         },
                         "anisotropyAngle": {
                           "type": "number",
@@ -4438,7 +5203,10 @@
                           "settingid": "dropTextures:anisotropyAngle",
                           "minimum": 0,
                           "maximum": 1,
-                          "default": 0
+                          "default": 0,
+                          "title": "Anisotropy Angle Map Threshold",
+                          "description": "Threshold for dropping nearly-uniform anisotropy angle maps",
+                          "toggleable": false
                         },
                         "iridescence": {
                           "type": "number",
@@ -4499,7 +5267,7 @@
       "description": "makes sure the merged or otherwise altered materials are inheriting the original material properties or alternatively get assigned new materials and Uvs",
       "toggleable": false
     },
-    "__ref_170__": {
+    "__ref_188__": {
       "oneOf": [
         {
           "additionalProperties": false,
@@ -4507,10 +5275,10 @@
             "keepMaterialsUVs": {
               "properties": {
                 "dropTextures": {
-                  "$ref": "#/$defs/__ref_162__"
+                  "$ref": "#/$defs/__ref_180__"
                 },
                 "atlasGenerator2ndUV": {
-                  "$ref": "#/$defs/__ref_165__"
+                  "$ref": "#/$defs/__ref_183__"
                 },
                 "forceNormalRebaking": {
                   "type": "boolean",
@@ -4542,7 +5310,7 @@
             "materialMerger": {
               "properties": {
                 "materialRegenerator": {
-                  "$ref": "#/$defs/__ref_153__"
+                  "$ref": "#/$defs/__ref_171__"
                 },
                 "materialMergingMethod": {
                   "enum": [
@@ -4599,10 +5367,10 @@
             "materialUVAggregator": {
               "properties": {
                 "dropTextures": {
-                  "$ref": "#/$defs/__ref_162__"
+                  "$ref": "#/$defs/__ref_180__"
                 },
                 "atlasGenerator2ndUV": {
-                  "$ref": "#/$defs/__ref_165__"
+                  "$ref": "#/$defs/__ref_183__"
                 },
                 "allowRectangularAtlases": {
                   "type": "boolean",
@@ -4675,7 +5443,7 @@
       "level": "basic",
       "settingid": "TexExportJpeg",
       "title": "JPG Compression Settings",
-      "description": "TBD",
+      "description": "compression settings for JPG texture format",
       "toggleable": false
     },
     "TextureCompression": {
@@ -4713,7 +5481,7 @@
           "level": "basic",
           "settingid": "TexExportWebp",
           "title": "WebP Compression Settings",
-          "description": "TBD",
+          "description": "compression settings for WebP texture format",
           "toggleable": false
         },
         "ktx": {
@@ -4772,7 +5540,7 @@
           "level": "basic",
           "settingid": "TexExportKtx",
           "title": "KTX Compression Settings",
-          "description": "TBD",
+          "description": "compression settings for KTX texture format",
           "toggleable": false
         }
       },
@@ -5405,7 +6173,8 @@
           "enum": [
             "none",
             "draco",
-            "dracoLossy"
+            "dracoLossy",
+            "meshQuantization"
           ],
           "level": "basic",
           "settingid": "geometryCompressionMethod",
@@ -5475,7 +6244,7 @@
           "level": "expert",
           "settingid": "draco",
           "title": "Draco Compression Settings",
-          "description": "TBD",
+          "description": "expert settings to customize draco compression",
           "toggleable": true
         }
       },
@@ -6619,7 +7388,7 @@
           ],
           "level": "basic",
           "settingid": "export:usdUnits",
-          "default": "cm",
+          "default": "original",
           "title": "USD Units",
           "description": "desired USD system unit",
           "toggleable": false
@@ -6651,7 +7420,7 @@
       "description": "Writes out and sets settings for the Universal Scene Description Format - usd",
       "toggleable": false
     },
-    "__ref_210__": {
+    "__ref_236__": {
       "properties": {
         "textureFormat": {
           "properties": {
@@ -6666,7 +7435,7 @@
               "settingid": "defaultMatTexFormat",
               "default": "auto",
               "title": "Default Texture Map Format",
-              "description": "TBD",
+              "description": "default format for exported texture maps",
               "toggleable": false
             }
           },
@@ -6675,7 +7444,7 @@
           "level": "basic",
           "settingid": "defaultMatTextureFormat",
           "title": "Texture Map Format",
-          "description": "TBD",
+          "description": "format for exported texture maps",
           "toggleable": true
         },
         "maxTexResolution": {
@@ -6688,7 +7457,7 @@
               "maximum": 16384,
               "default": 16384,
               "title": "Default Texture Map Resolution",
-              "description": "TBD",
+              "description": "default resolution for baked texture maps",
               "toggleable": false
             }
           },
@@ -6697,7 +7466,7 @@
           "level": "basic",
           "settingid": "defaultMatMaxTextureResolution",
           "title": "Maximum Texture Map Resolution",
-          "description": "TBD",
+          "description": "maximum resolution for exported texture maps",
           "toggleable": true
         },
         "textureCompression": {
@@ -6711,7 +7480,7 @@
           "level": "basic",
           "settingid": "defaultMatTexCompression",
           "title": "Texture Compression Settings",
-          "description": "TBD",
+          "description": "Texture compression settings for jpg, webp and ktx texture compression formats",
           "toggleable": true
         }
       },

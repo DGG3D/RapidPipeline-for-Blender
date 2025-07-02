@@ -127,14 +127,6 @@ class ProcessorPlugin:
         logo_color = "black" if not cls.isDarkTheme() else "white"
         return f":/logos/logo_{logo_color}.svg"
 
-    @classmethod
-    def getLogoLabel(cls, width: int = 400) -> str:
-        """
-        Loads image and creates QLabel.
-        """
-        logo_label = "TODO"
-        return logo_label
-
     ui_rules = {}
 
     @classmethod
@@ -329,6 +321,9 @@ class UIElement():
         if not self.settingid or self.settingid in self.hidden_settings:
             return False
 
+        if bpy.context.scene.rpde_magicAction:
+            return False
+
         levels = {"basic": 1, "advanced": 2, "expert": 3}
 
         if levels[self.level] > levels[bpy.context.scene.level]: #TODO get level from context scene element
@@ -405,6 +400,8 @@ class UIElement():
     def getSettings(self) -> Any:
         try:
             setting = getattr(*self.getValue(bpy.context))
+            if isinstance(setting, float):
+                setting = round(setting, 4)
             if setting == self.default and self.isToggleable():
                 return None
         except Exception:
@@ -498,8 +495,11 @@ class UIElement():
         if not self.isToggleable():
             return False
 
-        # ignore_export flag is set by the respective checkboxes of each UI element
-#        return not self.ignore_widget.isChecked()
+    def activateAllParents(self):
+        if self.parent_element:
+            if self.parent_element.isToggleable():
+                self.parent_element.setValue(True, bpy.context)
+            self.parent_element.activateAllParents()
 
 clss = (
     UIElementOperator,

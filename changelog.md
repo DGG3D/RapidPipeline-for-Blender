@@ -2,6 +2,24 @@
 
 ## Changelog
 
+### Version v0.2.3 June 30, 2025
+* Added Magic Actions
+    * A feature to quickly select and modify commonly used presets.
+        This allows for quick and easy processing without the need of in-depth knowledge of 3D processing tools 
+* Added option for tessellation resolution in CAD import
+* Added native CAD import file viewer
+* Fixed an issue where processed CAD imports would create loose nodes
+* Improvements to sorting of nodes in collections after processing 
+* Processing now exports textures as png per default
+* Updated schema used to match the version of other RapidPipeline Products
+* General improvements to stability
+
+### Version v0.2.2 May 22, 2025
+* Plugin now able to run outside of object mode
+* Fixed floating point rounding error
+* Updated Labels on buttons
+* Fixed collections for scene graph flattening option
+
 ### Version v0.2.1 April 24, 2025
 * CAD files imported are now moved to the correct collection
 * Changed position of Buttons in UI
@@ -9,9 +27,10 @@
 * Updated Labels and tooltips on buttons
 * Change to arguments on rpde call
 
-### Version v0.2.1_1 April 30, 2025
+### Version v0.2.1-1 May 02, 2025
 * fixed issue of cad import deleting selection
 * fixed issue of multiple runs not in the right collection
+* cad import now gets moved to a collection named after the cad file
 
 ### Version v0.2.0 March 25, 2025
 * Use Blender native UI instead of pyside
@@ -26,7 +45,7 @@
 * Most Input fields are now limited to a min and max value
 
 * Tab can be enabled and disabled
-* Cancle and retry button on execution
+* Cancel and retry button on execution
 * Improved Settings export
 * Minimum and Maximum limits to input fields
 * general Improvements to UI

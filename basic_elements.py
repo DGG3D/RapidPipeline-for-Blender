@@ -138,7 +138,7 @@ class FloatProperty(UIElement):
 
 #NOTE currently unused
 class PercentageProperty(bpy.types.PropertyGroup):
-    numer_prop : bpy.props.FloatProperty(default = 0.0, min=0, max= 100.0) # type: ignore
+    number_prop : bpy.props.FloatProperty(default = 0.0, min=0, max= 100.0) # type: ignore
     value_prop : bpy.props.FloatProperty(default = 0.0, min=0, max= 100.0) # type: ignore
     path : bpy.props.StringProperty(default="")   # type: ignore
     settingid : bpy.props.StringProperty(default="")  # type: ignore
