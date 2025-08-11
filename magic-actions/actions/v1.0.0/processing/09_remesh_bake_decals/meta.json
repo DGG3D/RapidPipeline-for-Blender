@@ -1,0 +1,27 @@
+{
+    "uid"         : "MA2025052909",
+    "min_engine_version" : [7,3,1],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 7, "3ds Max" : 7, "blender" : 7, "UnrealEngine" : 7 },
+    "name"        : "Remesh and Bake Decals",
+    "button_name" : "Remesh and Bake Decals",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "Remeshes to a lower face count, flattens scene graph and merges materials, creates UVs and bakes decals (garment details, logos) and material properties. Improves performance for real-time, games, XR.",
+    "explanation" : "Remeshes to a lower face count, flattens scene graph and merges materials, creates UVs and bakes decals (garment details, logos) and material properties. Improves performance for real-time, games, XR.",
+    "exposed_options" : [
+        {
+            "name": "Texture Baking Resolution",
+            "description" : "Steers the Resolution of the baked textures, default is 4096x4096 pixels.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.bakingResolution.default"
+        },
+        {
+            "name": "Face Target",
+            "description" : "The target amount of faces (triangles), default is 50,000 triangles.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.target.faces.value"
+        },
+        {
+            "name": "Remeshing Method",
+            "description" : "Voxelization creates backsides and mesh smoothing, better for multi-layered geometry (apparel). Shrinkwrap removes backsides and preserves the original shape, better suited for hard-surface models.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.method"
+        }
+    ]
+}

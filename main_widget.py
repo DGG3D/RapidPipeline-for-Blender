@@ -27,7 +27,6 @@ rpde/EULA_RapidPipelineEngine.rtf after installation, or during the install
 process) for further information.
 """
 
-import json
 import os
 import queue
 import subprocess
@@ -36,15 +35,15 @@ import webbrowser
 from sys import platform
 from typing import List
 
-import bpy  # type: ignore
-import bpy.utils.previews  # type: ignore
+import bpy
+import bpy.utils.previews
 
 # defines user appdata folder for the plugin
 base_dcc_data_folder = os.path.join(
     os.path.expanduser("~"), 'Documents') if 'darwin' in platform else os.getenv("LOCALAPPDATA")
 os.environ["RPDP_PROCESSOR_DCC_DATA"] = os.path.join(base_dcc_data_folder, "RapidPipeline 3D Processor Plugins")
 
-from .about_dialog import AboutDialog, AboutDialogPanel
+from .about_dialog import AboutDialog, AboutDialogPanel, OverrideTokenOperator
 from .basic_elements import (
     BooleanPropertyGroup,
     ColorPropertyGroup,
@@ -53,33 +52,37 @@ from .basic_elements import (
     IntegerPropertyGroup,
     StringPropertyGroup,
 )
-from .magic_actions_operator import ActivateMagicActionOperator, DeactivateMagicActionOperator
-
-dirname = os.path.dirname(__file__)
-cad_import = os.path.isfile(os.path.join(dirname, "cad_import.py"))
-if cad_import:
-    from .cad_import import CADImportFileOperator
-from .compound_elements import GroupPanel, SimpleContainer, TabElement, get_ui_elements_dict, init_ui_element
+from .compound_elements import GroupPanel, SimpleContainer, get_ui_elements_dict
+from .draw_ui import draw_main_panel, magic_actions_panel
+from .export_operator import ShowExportMenu
 from .gui_commons import ProcessorPlugin, UIElement
+from .import_operator import ImportFileOperator
+from .json_utils import JSonUtils
 from .license_manager import ProcessorLicense
-from .magic_actions_operator import magic_actions_options
 from .progress_dialog import ProgressDialog
-from .run_operator import RunOperator
 from .scene_utils import (
-    blend_create_prop,
-    blend_scene_getattr,
     blend_scene_init_setattr,
     blend_scene_setattr_enum,
     get_uuid,
     set_uuid,
 )
-from .settings_operator import DefaultsOperator, LoadOperator, SaveOperator
+from .settings_operator import (
+    CancelProcessorOperator,
+    DefaultsOperator,
+    LoadOperator,
+    RestartUIOperator,
+    RetryProcessorOperator,
+    SaveOperator,
+)
 
 preview_collections = {}
 uuid_paths = {} #key: uuid value: paths of schema
 
 execution_queue = queue.Queue()
 rpde_status = None
+
+dirname = os.path.dirname(__file__)
+cad_import = os.path.isfile(os.path.join(dirname, "cad_import.py"))
 
 def enum(**enums:dict[str,str]) -> type:
     return type('Enum', (), enums)
@@ -107,6 +110,21 @@ class LevelOperator(bpy.types.Operator):
         context.scene.level = self.level
         return {'FINISHED'}
 
+class SettingsOperator(bpy.types.Operator):
+    bl_idname = "processor.settings"
+    bl_description = "Open the RapidPipeline Settings"
+    bl_label = "settings"
+    bl_options = {'REGISTER'}
+
+    def execute(self, context:bpy.types.Context) -> set[str]:
+        bpy.types.Scene.rpde_settings = not context.scene.rpde_settings
+        bpy.types.Scene.rpde_draw_ui = not context.scene.rpde_settings
+        bpy.types.Scene.rpde_help = False
+        if not context.scene.rpde_settings and not context.scene.rpde_detail_mode:
+            # reset to first magic action to prevent issues:
+            reset_magic_actions()
+        return {'FINISHED'}
+
 class HelpOperator(bpy.types.Operator):
     bl_idname = "processor.help"
     bl_description = "Open the RapidPipeline Documentation Website"
@@ -114,11 +132,42 @@ class HelpOperator(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context:bpy.types.Context) -> set[str]:
-        self.helpLink()
+        bpy.types.Scene.rpde_help = not context.scene.rpde_help
+        bpy.types.Scene.rpde_draw_ui = not context.scene.rpde_help
+        bpy.types.Scene.rpde_settings = False
+        bpy.context.scene.aboutdialog = False
+#        self.helpLink()
         return {'FINISHED'}
 
-    def helpLink(self):
-        webbrowser.open(r"https://docs.rapidpipeline.com/docs/3dProcessor-Tutorials/blender-plugin-tutorials")
+class DocLinkOperator(bpy.types.Operator):
+    bl_idname = "processor.doclink"
+    bl_description = ""
+    bl_label = "help"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context:bpy.types.Context) -> set[str]:
+        webbrowser.open(r"https://docs.rapidpipeline.com/docs/componentDocs/integrations/blender-plugin-setup")
+        return {'FINISHED'}
+
+class FeedbackOperator(bpy.types.Operator):
+    bl_idname = "processor.feedback"
+    bl_description = ""
+    bl_label = "feedback"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context:bpy.types.Context) -> set[str]:
+        webbrowser.open(r"https://webforms.pipedrive.com/f/6q9NnMBNx3wtPNn2wJ49483fTonnF3e7jPK61JL64YqVui7VCxNV15tW9aznGyL3UL")
+        return {'FINISHED'}
+
+class ContactSupportOperator(bpy.types.Operator):
+    bl_idname = "processor.support"
+    bl_description = ""
+    bl_label = "support"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        webbrowser.open(r"https://go.crisp.chat/chat/embed/?website_id=922e6bf3-2bf5-48d4-ba89-5bd58ef411e1")
+        return {'FINISHED'}
 
 class RPDEPanel (bpy.types.Panel):
     bl_idname = "VIEW3D_PT_processor"
@@ -132,46 +181,11 @@ class RPDEPanel (bpy.types.Panel):
 
     @classmethod
     def poll(cls, context:bpy.types.Context) -> bool:
-        return context.scene.rpde_running and not context.scene.rpde_error
+        return context.scene.rpde_detail_mode and (context.scene.rpde_running and not context.scene.rpde_error)
 
     def draw(self, context:bpy.types.Context):
         self.layout.prop(context.scene, "rpde_percentage", text="Progress", slider=True)
         self.layout.label(text=context.scene.rpde_output)
-
-class CancelProcessorOperator(bpy.types.Operator):
-    bl_idname = "processor.cancel_processor"
-    bl_description = "Cancel the current process"
-    bl_label = "Cancel"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    def execute(self, context:bpy.types.Context) -> set[str]:
-        bpy.types.Scene.rpde_running = False
-        bpy.types.Scene.rpde_error = False
-        bpy.types.Scene.rpde_cancel = True
-        return {'FINISHED'}
-
-class RetryProcessorOperator(bpy.types.Operator):
-    bl_idname = "processor.retry_processor"
-    bl_description = "Retry the current process"
-    bl_label = "Retry"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    def execute(self, context:bpy.types.Context) -> set[str]:
-        print("Retry RapidPipeline...")
-        bpy.types.Scene.rpde_running = False
-        bpy.ops.processor.run()
-        return {'FINISHED'}
-
-class RestartUIOperator(bpy.types.Operator):
-    bl_idname = "processor.restart_processor"
-    bl_description = "restart_processor_token"
-    bl_label = "Restart"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    def execute(self, context:bpy.types.Context) -> set[str]:
-        print("Reloading UI...")
-        bpy.types.Scene.rpde_UI_error = False
-        return {'FINISHED'}
 
 def execute_queued_functions() -> float:
     while not execution_queue.empty():
@@ -185,20 +199,6 @@ def get_children(parent:UIElement) -> list[UIElement]:
         for child in parent.child_elements:
             child_nodes.extend(get_children(child))
     return child_nodes
-
-# loads metadata file
-processor_plugin = ProcessorPlugin()
-processor_plugin.loadPluginMetadata()
-
-# reset widgets, load schema and UI rules
-processor_plugin.reset()
-processor_plugin.loadSchema()
-processor_plugin.loadUIRules()
-schema = processor_plugin.getSolvedSchema()
-
-root_element:TabElement = init_ui_element("", "", uuid_dict=uuid_paths, schema=schema)
-
-root_children = list(get_children(root_element))
 
 class ButtonPanel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_Buttons"
@@ -214,6 +214,8 @@ class ButtonPanel(bpy.types.Panel):
         return not context.scene.rpde_running and context.scene.has_license and not context.scene.rpde_UI_error
 
     def draw(self, context:bpy.types.Context):
+        #TODO this gets replaced by buttons on top of the ui
+        return
         pcoll = preview_collections["main"]
         help_icon = pcoll["help"]
         about_icon = pcoll["about"]
@@ -224,7 +226,7 @@ class ButtonPanel(bpy.types.Panel):
 
 class MainPanel(bpy.types.Panel):
     bl_idname = "VIEW3D_PT_RapidPipeline"
-    bl_label = "RapidPipeline Processor"
+    bl_label = "RapidPipeline"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "RapidPipeline"
@@ -244,103 +246,43 @@ class MainPanel(bpy.types.Panel):
         rapidpipeline_icon: bpy.types.Icons = pcoll["rapidPipeline"]
         self.layout.template_icon(icon_value=rapidpipeline_icon.icon_id, scale=1.2)
 
+    def draw_header_preset(self, context):
+        pcoll = preview_collections["main"]
+        help_icon = pcoll["help"]
+        key_icon = pcoll["token_key"]
+        settings_icon = pcoll["settings"]
+        header_layout = self.layout.row(align=True)
+        header_layout.operator(OverrideTokenOperator.bl_idname, icon_value=key_icon.icon_id, text="")
+        header_layout.operator(SettingsOperator.bl_idname, icon_value=settings_icon.icon_id, text="")
+        header_layout.operator(HelpOperator.bl_idname, icon_value=help_icon.icon_id, text="")
+        self.layout.prop(context.scene, "magic_action_versions")
+
     def draw(self, context: bpy.types.Context):
-        ###############################
-        # draw ui error
-        ###############################
+        pcoll = preview_collections["main"]
         if context.scene.rpde_UI_error:
             drawUIError(self, context)
             return
-        ###############################
-        # draw rpde window
-        ###############################
+
+        if not context.scene.has_license:
+            return
+
+        if context.scene.rpde_settings:
+            self.layout.prop(context.scene, "rpde_enable_preview", text="Show Preview Image")
+            self.layout.prop(context.scene, "rpde_enable_description", text="Show Description")
+            self.layout.prop(context.scene, "rpde_detail_mode", text="Expert Mode")
+            self.layout.operator(SettingsOperator.bl_idname, text="Back", icon_value=pcoll["cancel"].icon_id)
+            return
+
+        if context.scene.rpde_help:
+            self.layout.operator(DocLinkOperator.bl_idname, text="Plugin Documentation", icon_value=pcoll["documentation"].icon_id)
+            self.layout.operator(FeedbackOperator.bl_idname, text="Feedback", icon_value=pcoll["feedback"].icon_id)
+            self.layout.operator(ContactSupportOperator.bl_idname, text="Contact Support", icon_value=pcoll["support"].icon_id)
+            self.layout.operator(AboutDialog.bl_idname, text="About the Plugin", icon_value=pcoll["about"].icon_id)
+            self.layout.operator(HelpOperator.bl_idname, text="Back", icon_value=pcoll["cancel"].icon_id)
+            return
+
         try:
-            if context.scene.rpde_running or not context.scene.has_license:
-                if context.scene.rpde_running and not context.scene.rpde_error:
-                    running_layout = self.layout.row()
-                    running_layout.operator(CancelProcessorOperator.bl_idname, text="Cancel")
-                if context.scene.rpde_error:
-                    error_layout = self.layout.row()
-                    error_layout.operator(CancelProcessorOperator.bl_idname, text="Cancel")
-                    error_layout.operator(RetryProcessorOperator.bl_idname, text="Retry")
-                    rpde_output = context.scene.rpde_output
-                    error_layout = self.layout.row()
-                    prettyPrint(self, rpde_output, context)
-                return
-
-            pcoll = preview_collections["main"]
-            import_icon = pcoll["import"]
-
-            ###############################
-            # draw magic action selection buttons
-            ###############################
-            selection_layout = self.layout.row()
-            selection_layout.operator(DeactivateMagicActionOperator.bl_idname,
-                            depress = False if context.scene.rpde_magicAction else True,
-                            text="Manual Settings")
-            selection_layout.operator(ActivateMagicActionOperator.bl_idname,
-                            depress = True if context.scene.rpde_magicAction else False,
-                            text="Magic Actions (Preview)")
-
-
-            ###############################
-            # draw CAD import option
-            ###############################
-            #NOTE only activate when CAD import is enabled in rpde version
-            if cad_import:
-                cad_import_layout = self.layout.row()
-                cad_import_layout.scale_y = 1
-                cad_import_layout.operator(
-                    CADImportFileOperator.bl_idname, icon_value=import_icon.icon_id, text="CAD Import")
-
-            ###############################
-            # draw execution buttons
-            ###############################
-            if not context.scene.rpde_magicAction:
-                button_layout = self.layout.grid_flow(
-                    row_major=True, columns=0, even_columns=True, even_rows=False, align=True)
-                self.getExecutionButtons(button_layout)
-            run_layout = self.layout.row()
-            pcoll = preview_collections["main"]
-            run_icon = pcoll["run"]
-            run_layout.scale_y = 1.6
-            run_layout.operator(RunOperator.bl_idname, icon_value=run_icon.icon_id, text="Run")
-
-            _ = self.layout.row()
-            _ = self.layout.row()
-
-            ###############################
-            # draw magic actions
-            ###############################
-            magic_actions_layout = self.layout.row()
-
-            if context.scene.rpde_magicAction:
-                self.getMagicActions(magic_actions_layout, context)
-
-
-            main_layout = self.layout.row()
-
-            ###############################
-            # draw level selection
-            ###############################
-            if not context.scene.rpde_magicAction:
-                main_layout.label(text="Level selection: ")
-                self.level_widget = self.getLevelSelection(main_layout, context)
-                main_layout = self.layout.row()
-
-                _ = self.layout.row()
-                _ = self.layout.row()
-
-            ###############################
-            # draw tab layout
-            ###############################
-            if not context.scene.rpde_magicAction:
-                tab_layout = self.layout.row()
-                for _, child in enumerate(root_children):
-                    if isinstance(child, SimpleContainer):
-                        child.draw_on_panel(tab_layout, context, self)
-
-            _ = self.layout.row()
+            draw_main_panel(self, context, preview_collections)
 
         except Exception:
             print("ERROR: Could not draw UI Components of RapidPipeline Blender Plugin.")
@@ -349,72 +291,87 @@ class MainPanel(bpy.types.Panel):
             traceback.print_stack()
             traceback.print_exc()
 
-    def getExecutionButtons(self, layout:bpy.types.UILayout) -> None:
-        pcoll = preview_collections["main"]
-        load_icon = pcoll["load"]
-        save_icon = pcoll["save"]
-        defaults_icon = pcoll["defaults"]
-        layout.scale_y = 1
-        layout.operator(LoadOperator.bl_idname, icon_value=load_icon.icon_id, text="Load Preset")
-        layout.operator(SaveOperator.bl_idname, icon_value=save_icon.icon_id, text="Save Preset")
-        layout.operator(DefaultsOperator.bl_idname, icon_value=defaults_icon.icon_id, text="Defaults")
+class MagicActionPanel(bpy.types.Panel):
+    bl_label = "Magic Action Panel"
+    bl_idname = "VIEW3D_PT_processor_magic_action_panel"
+    bl_parent_id = "VIEW3D_PT_RapidPipeline"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = "UI"
+    bl_category = "RapidPipeline"
+    bl_options = {'HIDE_HEADER'}
 
-    def getMagicActions(self, layout:bpy.types.UILayout, context:bpy.types.Context):
-        dirname = os.path.dirname(__file__)
-        if os.path.isdir(os.path.join(dirname, 'magic-actions')):
+
+    def draw(self, context:bpy.types.Context):
+        if (not context.scene.rpde_detail_mode and
+            context.scene.rpde_draw_ui and context.scene.has_license):
+
+            magic_layout = self.layout.row()
+
+            if os.path.isdir(os.path.join(dirname, 'magic-actions')):
+                from .settings_operator import SaveOperator
+                pcoll = preview_collections["main"]
+                import_icon = pcoll["import"]
+                save_icon = pcoll["save"]
+
+                magic_layout = self.layout.row(align=True)
+                magic_layout.scale_x = 1
+                magic_layout.alignment = 'LEFT'
+                sub = magic_layout.split(factor=0.66)
+                left_col = sub.row(align=True)
+
+                if cad_import:
+                    left_col.operator(
+                        ImportFileOperator.bl_idname, icon_value=import_icon.icon_id, text="Import 3D or CAD File")
+                else:
+                    left_col.operator(
+                        ImportFileOperator.bl_idname, icon_value=import_icon.icon_id, text="Import 3D")
+
+                left_col.operator(ShowExportMenu.bl_idname, icon_value=save_icon.icon_id, text="Export")
+                magic_layout = self.layout.row()
+                magic_layout = self.layout.row()
 
             layout = self.layout.box()
-            layout.label(text="Preview of upcoming Magic Actions feature")
-            layout.label(text="Use Magic Actions for a quick workflow:")
-            layout.prop(context.scene.magic_action_property, "dropdown_selection")
-            if context.scene.magic_action_property.dropdown_selection == "Choose a Magic Action":
-                if context.scene.magic_action_property.warning_msg:
-                    layout.label(text=context.scene.magic_action_property.warning_msg, icon='ERROR')
+            magic_actions_panel(layout, context, preview_collections)
 
-            if magic_actions_options:
-                layout.separator()
+#NOTE not in use
+class MagicActionProcessingPanel(bpy.types.Panel):
+    bl_label = "Magic Action Processing Panel"
+    bl_idname = "VIEW3D_PT_processor_magic_action_processing_panel"
+    bl_parent_id = "VIEW3D_PT_RapidPipeline"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = "UI"
+    bl_category = "RapidPipeline"
 
-            for option in magic_actions_options:
-                attribute_env, attribute = blend_scene_getattr(
-                    context.scene, "magic_action", uuid_dict={}, path=option.option_path)
+    def draw(self, context):
+        pcoll = preview_collections["main"]
+        main_layout = self.layout.column_flow()
+        if context.scene.magic_action_property.magic_actions:
+            magic_running_layout = main_layout.column_flow()
+            magic_running_layout.enabled = True
+            if context.scene.rpde_running:
+                magic_running_layout.operator(CancelProcessorOperator.bl_idname, text="Cancel", icon_value=pcoll["cancel"].icon_id)
+                magic_running_layout = main_layout.row()
 
-                layout.label(text=option.ui_element.parent_element.title)
-                blend_create_prop(layout, attribute_env, attribute, name=option.ui_element.title)
-
-            _ = self.layout.row()
-            _ = self.layout.row()
-
-
-    def getLevelSelection(self, main_layout: bpy.types.UILayout, context:bpy.types.Context):
-        """
-        Radio button group, selecting the settings level to be displayed.
-        """
-
-        main_layout.scale_y = 1.3
-
-        basic_level = main_layout.operator(
-            LevelOperator.bl_idname,
-            text="Basic",
-            depress=bpy.context.scene.level == 'basic')
-        basic_level.level = 'basic'
-        advanced_level = main_layout.operator(
-            LevelOperator.bl_idname,
-            text="Advanced",
-            depress=bpy.context.scene.level == 'advanced')
-        advanced_level.level = 'advanced'
-        expert_level = main_layout.operator(
-            LevelOperator.bl_idname,
-            text="Expert",
-            depress=bpy.context.scene.level == 'expert')
-        expert_level.level = 'expert'
-
+            magic_layout = main_layout.row()
+            magic_layout.prop(context.scene, "rpde_percentage", text="Progress", slider=True)
+            magic_layout = main_layout.row()
+            magic_layout.label(text="Process Log")
+            magic_layout = main_layout.row()
+            box_layout = magic_layout.box()
+            sub = box_layout.row()
+            sub.scale_y = 1.5
+            #process log
+            sub.label(text=context.scene.rpde_output)
+            magic_layout = main_layout.row()
+            if context.scene.rpde_running:
+                magic_layout.enabled = False
 
 clss = (MainPanel, BooleanPropertyGroup,
         IntegerPropertyGroup, FloatPropertyGroup, LevelOperator, ColorPropertyGroup,
-        LoadOperator, SaveOperator, DefaultsOperator, HelpOperator, RunOperator,
+        LoadOperator, SaveOperator, DefaultsOperator, HelpOperator, DocLinkOperator,
         StringPropertyGroup, RPDEPanel,
         GroupWidgetPropertyGroup, CancelProcessorOperator, RetryProcessorOperator,
-        RestartUIOperator,
+        RestartUIOperator, SettingsOperator, MagicActionPanel, ContactSupportOperator, FeedbackOperator,
         )
 
 late_reg_clss = (ButtonPanel, AboutDialogPanel)
@@ -426,7 +383,7 @@ late_reg, late_unreg = bpy.utils.register_classes_factory(late_reg_clss)
 def drawUIError(panel:bpy.types.Panel, context:bpy.types.Context):
         error_layout = panel.layout.row()
         error_msg = """ERROR: Could not draw UI Components of RapidPipeline Blender Plugin. \n
-        Please try to restart the RapidPipeline Plugin or contact Customer Support."""
+        Please try to save and restart the Blender scene or contact Customer Support."""
 
         prettyPrint(panel, error_msg, context)
         error_layout.operator(RestartUIOperator.bl_idname, text="Restart")
@@ -501,11 +458,34 @@ def add_parent_to_panel(in_path:List[str], panel:GroupPanel, schema_key:str):
         print("Error: could not find schema key for adding parent to panel")
         print(f"For Path: {in_path} and panel: {panel.bl_label}")
 
+# gets a dict of all descriptions of magic action options to be used in setup_proerties
+def get_magic_descriptions() -> dict:
+    from .magic_actions_operator import get_export_actions, get_import_actions, get_magic_actions
+    options_descriptions_dict = {}
+    magic_actions = get_magic_actions()
+    import_actions = get_import_actions()
+    export_actions = get_export_actions()
+    magic_actions.extend(import_actions)
+    magic_actions.extend(export_actions)
+
+    for action in magic_actions:
+        for option in action.action_options:
+            options_descriptions_dict[get_uuid(option.option_path)] = option.option_description
+
+    return options_descriptions_dict
+
 def setup_properties(schema: dict,
                      parent: dict = None,
                      path: List[str] = [],
                      schema_key:str = "",
-                     parent_panel:str = ""):
+                     parent_panel:str = "",
+                     magic_descriptions_dict:dict = {}):
+
+    def get_description():
+        if get_uuid(path) in magic_descriptions_dict:
+            return magic_descriptions_dict[get_uuid(path)]
+        else:
+            return schema.get("description", "")
 
     if isinstance(parent, dict) and parent.get('settingid', None) is not None:
         if schema_key:
@@ -525,39 +505,45 @@ def setup_properties(schema: dict,
                         add_parent_to_panel(path.copy(), parent_panel, sub_schema)
                     setup_properties(schema=schema['properties'][sub_schema],
                                         parent=schema.copy(), path=path.copy(),
-                                        schema_key=sub_schema, parent_panel=parent_panel)
+                                        schema_key=sub_schema, parent_panel=parent_panel,
+                                        magic_descriptions_dict=magic_descriptions_dict)
 
         if not schema_key:
             continue
+
+        #case only for export
+        if key == "items" and attribute_id == "exportArray":
+            setup_properties(schema["items"], parent, path, schema_key,
+                             parent_panel, magic_descriptions_dict=magic_descriptions_dict)
 
         if key == 'type':
             if schema['type'] == 'boolean':
                 blend_scene_init_setattr(
                     bpy.types.Scene, attribute_id, property_group=BooleanPropertyGroup, path=path,
                     value_function=bpy.props.BoolProperty(
-                        default=schema['default'], description=schema.get("description", "")),
+                        name="", default=schema['default'], description=get_description()),
                     uuid_dict=uuid_paths, toggable=('toggleable' in schema))
                 add_ui_element_to_panel(path, parent_panel)
             if schema['type'] == 'integer':
                 blend_scene_init_setattr(
                     bpy.types.Scene, attribute_id, property_group=IntegerPropertyGroup, path=path,
                     value_function=bpy.props.IntProperty(
-                        default=schema['default'], min=schema.get('minimum', 0.0),
-                        max=schema.get('maximum', 100_000_000), description=schema.get("description", "")),
+                        name="", default=schema['default'], min=schema.get('minimum', 0.0),
+                        max=schema.get('maximum', 100_000_000), description=get_description()),
                     uuid_dict=uuid_paths, toggable=('toggleable' in schema))
                 add_ui_element_to_panel(path, parent_panel)
             if schema['type'] == 'string':
                 blend_scene_init_setattr(
                     bpy.types.Scene, attribute_id, property_group=StringPropertyGroup, path=path,
                     value_function=bpy.props.StringProperty(
-                        default=schema['default'], description=schema.get("description", "")),
+                        name="", default=schema.get('default', ""), description=get_description()),
                     uuid_dict=uuid_paths, toggable=('toggleable' in schema))
                 add_ui_element_to_panel(path, parent_panel)
             if schema['type'] == 'object':
                 blend_scene_init_setattr(
                     bpy.types.Scene, attribute_id,
                     property_group=GroupWidgetPropertyGroup, path=path,
-                    value_function=bpy.props.BoolProperty(default=False, description=schema.get("description", "")),
+                    value_function=bpy.props.BoolProperty(name="", default=False, description=get_description()),
                     uuid_dict=uuid_paths, toggable=('toggleable' in schema))
                 add_ui_element_to_panel(path, parent_panel)
 
@@ -568,24 +554,31 @@ def setup_properties(schema: dict,
                             property_group=FloatPropertyGroup, path=path,
                             value_function=
                                 bpy.props.FloatProperty(
+                                    name="",
                                     min=schema['minimum'],
                                     max=schema['maximum'],
                                     default=schema['default'],
                                     subtype='PERCENTAGE',
-                                    description=schema.get("description", "")),
+                                    description=get_description()),
                                     uuid_dict=uuid_paths,
                                     value=schema['default'],
-                                    toggable=('toggleable' in schema))
+                                    toggable=('toggleable' in schema),
+                                    precision=3
+                                    )
                         add_ui_element_to_panel(path, parent_panel)
                 else:
                     if 'maximum' in schema:
                         value_function = bpy.props.FloatProperty(
+                                name="",
                                 min=schema.get('minimum', 0.0), max=schema['maximum'],
-                                default=schema.get('default', 0.0), description=schema.get("description", ""))
+                                default=schema.get('default', 0.0), description=get_description(),
+                                precision=3)
                     else:
                         value_function = bpy.props.FloatProperty(
+                                    name="",
                                     min=schema.get('minimum', 0.0), default=schema.get('default', 0.0),
-                                    description=schema.get("description", ""))
+                                    description=get_description(),
+                                    precision=3)
                     blend_scene_init_setattr(
                         bpy.types.Scene, attribute_id,
                         property_group=FloatPropertyGroup, path=path,
@@ -597,8 +590,9 @@ def setup_properties(schema: dict,
                 blend_scene_init_setattr(
                     bpy.types.Scene, attribute_id, property_group=ColorPropertyGroup, path=path,
                     value_function=bpy.props.FloatVectorProperty(
+                        name="",
                         default = (schema['default'][:3]), min=0.0, max=1.0, subtype='COLOR',
-                        description=schema.get("description", "")),
+                        description=get_description()),
                         uuid_dict=uuid_paths, toggable=('toggleable' in schema))
                 add_ui_element_to_panel(path, parent_panel)
 
@@ -607,7 +601,7 @@ def setup_properties(schema: dict,
             for element in schema['enum']:
                 enum_options.append((element,)*3)
             blend_scene_setattr_enum(bpy.types.Scene, attribute_id, uuid_dict=uuid_paths,
-                    property=bpy.props.EnumProperty(items=enum_options, description=schema.get("description", "")),
+                    property=bpy.props.EnumProperty(name="", items=enum_options, description=get_description()),
                     path=path)
             add_ui_element_to_panel(path, parent_panel)
 
@@ -631,7 +625,7 @@ def setup_properties(schema: dict,
             path_oneof = path.copy()
             path_oneof.append("Oneof")
             blend_scene_setattr_enum(bpy.types.Scene, attribute_id, uuid_dict=uuid_paths,
-                    property=bpy.props.EnumProperty(items=oneof_elements, description=schema.get("description", "")),
+                    property=bpy.props.EnumProperty(name="", items=oneof_elements, description=get_description()),
                     path=path_oneof)
             add_ui_element_to_panel(path_oneof, parent_panel)
 
@@ -641,7 +635,8 @@ def setup_properties(schema: dict,
                     setup_properties(schema=oneof_sub_schema,
                                         parent=schema.copy(),
                                         path=path_tmp, schema_key= None,
-                                        parent_panel=parent_panel)
+                                        parent_panel=parent_panel,
+                                        magic_descriptions_dict=magic_descriptions_dict)
                 path=path_tmp
 
         path= temp_path
@@ -652,32 +647,60 @@ def setup_icons():
     pcoll = bpy.utils.previews.new()
     dirname = os.path.dirname(__file__)
     icons_dict = {
-        "rapidPipeline" : 'Icon_solid_green.png',
-        "edit" : '3dEdit.svg',
-        "import" : 'import.svg',
-        "sceneGraphFlattening" : 'sceneGraphFlattening.svg',
-        "meshCulling" : 'meshCulling.svg',
-        "optimize" : 'optimize.svg',
-        "modifier" : 'outcomeModifier.svg',
-        "export" : 'exportArray.svg',
-        "load" : 'load.svg',
-        "save" : 'save.svg',
-        "defaults" : 'restore.svg',
-        "help" : 'help.svg',
-        "about" : 'info.svg',
-        "run" : 'run.svg'
+        "rapidPipeline" : ('Icon_solid_green.png', 'rpd_icon.svg'),
+        "edit" : ('3dEdit.svg',),
+        "import" : ('save.svg','import.svg',),
+        "sceneGraphFlattening" : ('sceneGraphFlattening.svg',),
+        "meshCulling" : ('meshCulling.svg',),
+        "optimize" : ('optimize.svg',),
+        "modifier" : ('outcomeModifier.svg',),
+        "export" : ('exportArray.svg',),
+        "load" : ('load.svg', 'import.svg',),
+        "save" : ('blend_import.svg', 'open.svg', 'save.svg',),
+        "defaults" : ('restore.svg',),
+        "help" : ('blend_help.svg', 'help.svg',),
+        "about" : ('info.svg',),
+        "run" : ('blend_run.svg', 'run.svg', 'magic.svg'),
+        "Magic_action_placeholder" : ('Blender Background.PNG',),
+        "token_key": ('blend_key.svg','key.svg',),
+        "settings": ('blend_settings.svg' ,'settings.svg',),
+        "documentation": ('doc.svg',),
+        "feedback": ('feedback.svg',),
+        "cancel": ('cancel.svg',),
+        "support": ('support.svg',)
     }
-    for file, file_name in icons_dict.items():
-        icon_dir = os.path.join(dirname, 'resources', 'images', file_name)
-        pcoll.load(file, icon_dir, 'IMAGE')
 
-    if os.path.isdir(os.path.join(dirname, 'magic-actions')):
-        magic_action_folder = os.path.join(dirname, 'magic-actions', 'actions')
-        for magic_action in os.listdir(magic_action_folder):
-            if os.path.isdir(os.path.join(magic_action_folder, magic_action)):
-                icon_dir = os.path.join(magic_action_folder, magic_action, 'icon-dark.svg')
-                pcoll.load(f"magic_action_{magic_action}", icon_dir, 'IMAGE')
-                setattr(bpy.types.Scene, f"magic_action_{magic_action}", pcoll[f"magic_action_{magic_action}"])
+    for file, file_names in icons_dict.items():
+        common_icon_found = False
+        for file_name in file_names:
+            commons_icon_dir = os.path.join(dirname, '3DProcessorPluginsCommon', 'assets', 'icons', file_name)
+            if os.path.isfile(commons_icon_dir):
+                pcoll.load(file, commons_icon_dir, 'IMAGE')
+                common_icon_found = True
+                break
+
+        if not common_icon_found:
+            for file_name in file_names:
+                resources_dir = os.path.join(dirname, 'resources', 'images', file_name)
+                if os.path.isfile(resources_dir):
+                    pcoll.load(file, resources_dir, 'IMAGE')
+                    break
+
+    magic_action_path = os.path.join(dirname, 'magic-actions', 'actions')
+    if os.path.isdir(os.path.join(magic_action_path)):
+        for version in os.listdir(magic_action_path):
+            if version != "Custom":
+                for type in ('import', 'processing', 'export'):
+                    magic_action_folder = os.path.join(magic_action_path, version, type)
+                    if os.path.isdir(magic_action_folder):
+                        for magic_action in os.listdir(magic_action_folder):
+                            if os.path.isdir(os.path.join(magic_action_folder, magic_action)):
+                                icon_dir = os.path.join(magic_action_folder, magic_action, 'icon-dark.svg')
+                                image_dir = os.path.join(magic_action_folder, magic_action, "image.png")
+                                pcoll.load(f"magic_action_{version}_{magic_action}", icon_dir, 'IMAGE')
+                                if os.path.isfile(image_dir):
+                                    pcoll.load(f"magic_action_image_{version}_{magic_action}", image_dir, 'IMAGE')
+                                setattr(bpy.types.Scene, f"magic_action_{version}_{magic_action}", pcoll[f"magic_action_{version}_{magic_action}"])
 
     preview_collections["main"] = pcoll
 
@@ -689,6 +712,7 @@ def setup_icons():
     bpy.types.Scene.icon_optimize = pcoll["optimize"]
     bpy.types.Scene.icon_outcomeModifier = pcoll["modifier"]
     bpy.types.Scene.icon_export = pcoll["export"]
+    bpy.types.Scene.icon_cancel = pcoll["cancel"]
 
 
 def register():
@@ -710,7 +734,8 @@ def register():
         global register_worked
         if not register_worked:
             register_worked = True
-            setup_properties(schema, path=[])
+            magic_descriptions_dict = get_magic_descriptions()
+            setup_properties(schema, path=[], magic_descriptions_dict=magic_descriptions_dict)
 
     bpy.app.timers.register(wait_for_late_register, first_interval=0.1)
     bpy.app.handlers.load_post.append(wait_for_late_register)  #wait for context to be fully loaded
@@ -730,7 +755,7 @@ def register():
 
     #setup level
     level = [(("basic",)*3), (("advanced",)*3), (("expert",)*3)]
-    bpy.types.Scene.level = bpy.props.EnumProperty(items=level)
+    bpy.types.Scene.level = bpy.props.EnumProperty(items=level, default=2)
 
 
     bpy.types.Scene.boolean_default = bpy.props.PointerProperty(type=BooleanPropertyGroup)
@@ -742,7 +767,7 @@ def register():
         default = (1.0, 1.0, 1.0), min=0.0, max=1.0, subtype='COLOR')
 
     bpy.types.Scene.rpde_output = ""
-    bpy.types.Scene.rpde_percentage = bpy.props.IntProperty(default=0, min=0, max=100, step=1, subtype='PERCENTAGE')
+    bpy.types.Scene.rpde_percentage = bpy.props.IntProperty(default=0, min=0, max=100, step=1, subtype='PERCENTAGE', options={'SKIP_SAVE'})
     bpy.types.Scene.has_license = ProcessorLicense.performLicenseCheck(None)
     bpy.types.Scene.use_token_future_sessions = bpy.props.BoolProperty(
         default=False,
@@ -752,11 +777,34 @@ def register():
         description="If checked, you agree to the Terms and Conditions of RapidPipeline usage.")
     bpy.types.Scene.api_token = bpy.props.StringProperty(default="")
     bpy.types.Scene.override_token = False
+    bpy.types.Scene.rpde_settings = False
+    bpy.types.Scene.rpde_help = False
+    bpy.types.Scene.rpde_draw_ui = True
+    bpy.types.Scene.rpde_enable_preview = bpy.props.BoolProperty(
+        default=True,
+        description="If checked, enables previews of Actions.")
+    bpy.types.Scene.rpde_enable_description = bpy.props.BoolProperty(
+        default=True,
+        description="If checked, disables descriptions of Actions.")
     bpy.types.Scene.rpde_running = False
     bpy.types.Scene.rpde_error = False
     bpy.types.Scene.rpde_cancel = False
     bpy.types.Scene.rpde_UI_error = False
-    bpy.types.Scene.rpde_magicAction = False
+    bpy.types.Scene.rpde_export = False
+    bpy.types.Scene.rpde_detail_mode = bpy.props.BoolProperty(
+        default=False,
+        description="Switches the views between Actions and detailed view.")
+
+    dirname = os.path.dirname(__file__)
+    magic_action_versions_path = os.path.join(dirname, "magic-actions", "actions")
+    versions = [(version, version, version) for version in os.listdir(magic_action_versions_path) if version != "Custom"]
+    bpy.types.Scene.magic_action_versions = bpy.props.EnumProperty(
+            name="",
+            description="Versions of Actions",
+            items=versions,
+            default=versions[-1][0],
+            update=change_magic_action_version
+        )
 
     # load_post is only called on blender startup
     # timers.register is used in case the plugin is installed without a blender restart
@@ -770,6 +818,7 @@ def register():
             late_reg()
             # save Addon to userpref to activate directly
             bpy.ops.wm.save_userpref()
+            reset_magic_actions()
 
     bpy.app.timers.register(wait_for_late_register, first_interval=0.2)
     bpy.app.handlers.load_post.append(wait_for_late_register)  #wait for context to be fully loaded
@@ -779,6 +828,17 @@ def register():
         removeQuarantineFlagOnMac()
     elif 'linux' == platform:
         setupLinux()
+
+def change_magic_action_version(self, context):
+    from .magic_actions_operator import set_version
+    set_version(context.scene.magic_action_versions)
+
+def reset_magic_actions():
+    # press first magic_action_button in ui
+    from .magic_actions_operator import MagicAction, get_magic_actions
+    magic_actions_sorted:list[MagicAction] = get_magic_actions()
+    first_magic_action = magic_actions_sorted[0].action_name
+    bpy.ops.processor.magic_action_button(magic_action_str=first_magic_action)
 
 def removeQuarantineFlagOnMac():
     os.chdir(os.path.dirname(ProcessorPlugin.getRPDEPath()))

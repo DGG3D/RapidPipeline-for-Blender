@@ -39,7 +39,7 @@ base_dcc_data_folder = os.path.join(
     os.path.expanduser("~"), 'Documents') if 'darwin' in platform else os.getenv("LOCALAPPDATA")
 os.environ["RPDP_PROCESSOR_DCC_DATA"] = os.path.join(base_dcc_data_folder, "RapidPipeline 3D Processor Plugins")
 
-from .compound_elements import get_ui_elements_dict
+from .compound_elements import OneOfWidget, get_ui_elements_dict
 from .gui_commons import SettingsValidator, UIElement, UserDialog
 from .json_utils import JSonUtils
 from .scene_utils import get_uuid
@@ -50,7 +50,8 @@ def unpackdict(settings:dict, output_list:list[tuple[str, Any, str]], path:list)
     copy_path = path.copy()
     for key, value in settings.items():
         if key == 'export':
-            continue
+            if isinstance(value, list) and len(value) > 0:
+                value = value[0]    #unpack list of export settings
         path.append(key)
         if isinstance(value, list):
             output_list.append((key, value, path)) # Output list (name, value, path)
@@ -70,20 +71,32 @@ def resetSettingsToDefault(context:bpy.types.Context):
     """
     Resets all the UI element settings to their default values.
     """
-    from .main_widget import root_children
+    from .draw_ui import root_children
     for element in root_children:
         element.setDefaultValue(context)
 
 def setValue(context:bpy.types.Context, settings:dict):
-    list_of_settings: list[tuple[str, Any, str]] = unpackdict(settings, [], [])
+    list_of_settings: list[tuple[str, Any, set]] = unpackdict(settings, [], [])
 
     for (_, value, path) in list_of_settings:
         try:
             ui_element:UIElement = get_ui_elements_dict()[get_uuid(path)]
         except Exception:
             print(f"Warning, could not set config of path: {path}")
+            continue
 
-        # set Oneof to correct value
+        #test: try to set ONEOF if its there
+        ui_element_oneof = None
+        try:
+            oneof_path = set(path.copy())
+            oneof_path.add("Oneof")
+            ui_element_oneof:OneOfWidget = get_ui_elements_dict()[get_uuid(oneof_path)]
+        except:  # noqa: E722, S110
+            pass
+        if ui_element_oneof:
+            # set Oneof to correct value
+            ui_element_oneof.setValue(value, context)
+
         ui_element.setValue(value, context)
 
 def discard_settings(settings:dict, key:str) -> dict:
@@ -179,6 +192,7 @@ class SaveOperator(bpy.types.Operator):
 
     # Define a function to trigger the file browser
     def invoke(self, context:bpy.types.Context, event:bpy.types.Event) -> set[str]:
+        self.filepath = ".json"
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
@@ -193,7 +207,7 @@ class SaveOperator(bpy.types.Operator):
 
         # build settings from current UI input
         settings_json = {}
-        from .main_widget import root_element
+        from .draw_ui import root_element
         settings_json = root_element.getSettings()
 
         os.makedirs(os.path.dirname(dialog_file), exist_ok=True)
@@ -234,3 +248,39 @@ class DefaultsOperator(bpy.types.Operator):
 
         print("Reset to defaults: ")
         resetSettingsToDefault(context)
+
+class CancelProcessorOperator(bpy.types.Operator):
+    bl_idname = "processor.cancel_processor"
+    bl_description = "Cancel the current process"
+    bl_label = "Cancel"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context:bpy.types.Context) -> set[str]:
+        bpy.types.Scene.rpde_running = False
+        bpy.types.Scene.rpde_error = False
+        bpy.types.Scene.rpde_cancel = True
+        return {'FINISHED'}
+
+class RetryProcessorOperator(bpy.types.Operator):
+    bl_idname = "processor.retry_processor"
+    bl_description = "Retry the current process"
+    bl_label = "Retry"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context:bpy.types.Context) -> set[str]:
+        print("Retry RapidPipeline...")
+        bpy.types.Scene.rpde_running = False
+        bpy.types.Scene.rpde_error = False
+        bpy.ops.processor.run()
+        return {'FINISHED'}
+
+class RestartUIOperator(bpy.types.Operator):
+    bl_idname = "processor.restart_processor"
+    bl_description = "restart_processor_token"
+    bl_label = "Restart"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context:bpy.types.Context) -> set[str]:
+        print("Reloading UI...")
+        bpy.types.Scene.rpde_UI_error = False
+        return {'FINISHED'}

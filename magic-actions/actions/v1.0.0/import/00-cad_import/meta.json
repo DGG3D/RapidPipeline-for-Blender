@@ -1,0 +1,49 @@
+{
+    "uid"                : "MA2025052900",
+    "min_engine_version" : [7,1,0],
+    "ui_prio_hints"      : { "Substance" : -1, "Maya" : 0, "3ds Max" : 0, "blender" : 0, "UnrealEngine" : 0 },
+    "name"               : "Import CAD Format",
+    "button_name"        : "Import CAD Format",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long"  : "Imports a CAD model from any supported file format into the application. This includes tessellation into a 3D mesh.",
+    "explanation"        : "Imports a CAD model from any supported file format into the application. This includes tessellation into a 3D mesh.",
+    "exposed_options" : [
+        {
+            "name": "Tessellation Resolution",
+            "description" : "Tessellation resolution for imported CAD surfaces. Fine refers to the most detailed and dense tessellation while coarse refers to a simple more apromixated tessellation for preview or proxy purposes.",
+            "path": "import.CAD.tessellationResolution"
+        },
+        {
+            "name": "CAD Sewing Tolerance",
+            "description" : "Tolerance for the sewing operation on the b-reps before tessellation. This especially helps with data introducing lots of surface patches by merging them into more coherent parts.",
+            "path": "import.CAD.sewTolerance"
+        },
+        {
+            "name": "Remove T-Junctions",
+            "description" : "Attempts to remove T-Junctions after CAD tessellation. This is an experimental feature.",
+            "path": "import.CAD.removeTJunctions"
+        },
+        {
+            "name": "Convert Z- to Y-Up",
+            "description" : "Turns rotation to z-axis pointing upwards on/off. Helpful if origin axis system is Z-Up and target system is Y-Up.",
+            "path": "import.general.rotateZUp"
+        },
+        {
+            "name": "Fix Winding Order",
+            "description" : "Automatically fix the winding order of parts on import.",
+            "path": "3dEdit.repair.windingOrder",
+            "toggled": false
+        },
+        {
+            "name": "Remove Occluded Parts",
+            "description" : "Removes invisible (occluded) parts from the 3D model on import.",
+            "path": "meshCulling.occlusionCulling",
+            "toggled": false
+        },
+		{
+            "name": "Simplify Mesh",
+            "description" : "Decimates the tessellated mesh to a certain amount of faces during import.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.target.faces.value"
+		}
+    ]
+}

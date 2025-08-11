@@ -39,15 +39,16 @@ def blend_scene_init_setattr(
         property_group:bpy=None,
         path:List[str]=[],
         value_function:Callable=None,
-        uuid_dict:dict={}, toggable:bool=False):
+        uuid_dict:dict={}, toggable:bool=False, reset:bool=False):
     if not path:
         raise Exception(f"ERROR: error in setting blend attribute. Could not find path for id: {id}!")
-    if toggable:
-        path_toggable = path.copy()
-        path_toggable.append("toggable")
-        set_uuid(set(path_toggable))
-    set_uuid(set(path))
-    if not hasattr(scene, get_uuid(path)):
+    if not get_uuid(path):
+        if toggable:
+            path_toggable = path.copy()
+            path_toggable.append("toggable")
+            set_uuid(set(path_toggable))
+        set_uuid(set(path))
+    if reset or (not hasattr(scene, get_uuid(path))):
         if property_group:
             setattr(scene, get_uuid(path), value_function)
         else:
@@ -69,29 +70,22 @@ def blend_scene_setattr_enum(scene:bpy.types.Scene, id:str, uuid_dict:dict, prop
         setattr(scene, get_uuid(path), property)
     else:
         getattr(scene, get_uuid(path))
-        print(f"Warning: Scene already has attribute: {id}, adding new element to collection")
 
 def blend_scene_getattr(
         scene:bpy.types.Scene,
-        settingid:str,
-        uuid_dict:dict,
-        type_in:str = None,
+        settingid:str = "",
+        type_in:str = "",
         path:set=[]) -> tuple[bpy.types.Scene, Any]:
     attribute_uuid = get_uuid(path)
     # has to search trough the correct collection property and get the property where the path matches
     try:
         if hasattr(scene, attribute_uuid):
-            prop = getattr(scene, attribute_uuid)
-            if isinstance(prop, bpy.types.bpy_prop_collection): #currently not in use
-                # check paths:
-                return (prop[0], "value_prop")
-            else:
-                return (scene,  attribute_uuid)
+            return (scene,  attribute_uuid)
         else:
-            print(f"Warning: could not find attribute '{settingid}' in blend scene. \n Using default instead.")
-            return (scene, f'{type_in}_default')
+            print(f"Warning: could not find attribute with path '{path}' in blend scene.")
+            return None
     except Exception:
-        print(f"Error: could not get blender attribute settingID: {settingid}, type: {type_in}, Path: {path}")
+        print(f"Error: could not get blender attribute Path: {path}")
         print(f"Attribute UUID: {attribute_uuid}")
         print(traceback.format_exc())
 
@@ -102,11 +96,7 @@ def blend_create_prop(panel_layout:bpy.types.UILayout,
                       name:str='',
                       type:str = None,
                       slider:bool = False):
-    if 'default' in attribute:
-        print("ERROR: Unexpected error, default prop is used!")
-        panel_layout.prop(attribute_env, f'{type}_default', text=f"dafault {type}", slider=slider)
-    else:
-        panel_layout.prop(attribute_env, attribute, text=name, slider=slider)
+    panel_layout.prop(attribute_env, attribute, text=name, slider=slider)
 
 
 uuid_paths:dict = {}

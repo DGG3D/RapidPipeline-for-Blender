@@ -316,12 +316,16 @@ class UIElement():
         self.default = schema.get("default", None)
         self.uuid_dict = uuid_dict
         self.panel = None
+        self.env_uuid: tuple[bpy.tpyes.Scene, Any] = None
 
     def isdrawn(self) -> bool:
         if not self.settingid or self.settingid in self.hidden_settings:
             return False
 
-        if bpy.context.scene.rpde_magicAction:
+        if not bpy.context.scene.rpde_detail_mode:
+            return False
+
+        if not bpy.context.scene.has_license or bpy.context.scene.rpde_settings or bpy.context.scene.rpde_help:
             return False
 
         levels = {"basic": 1, "advanced": 2, "expert": 3}
@@ -353,7 +357,7 @@ class UIElement():
                     oneof_path.append("Oneof")
                     attribute_env, oneof_selection = blend_scene_getattr(
                         bpy.context.scene, self.parent_element.parent_element.settingid,
-                        self.uuid_dict, "oneOf", oneof_path)
+                        "oneOf", oneof_path)
                     oneof_attribute = getattr(attribute_env, oneof_selection)
                     if not oneof_attribute == self.settingid:
                         return False
@@ -387,19 +391,12 @@ class UIElement():
             class_name = self.__class__.__name__
             raise ValueError(f"Incorrect schema type {type_provided} for {class_name}: {self.type_required} required.")
 
-    def setTooltipToWidget(self, widget: Any):
-        """
-        If a schema description is available, set it as a tooltip to a specific widget.
-        """
-        if self.schema.get("description", None):
-            widget.setToolTip(self.schema["description"])
-
     # returns the value of a given UI element
     # if the value is a boolean than returns that boolean if the setting is 'toggleable'
     # otherwise returns True
     def getSettings(self) -> Any:
         try:
-            setting = getattr(*self.getValue(bpy.context))
+            setting = getattr(*self.get_env_uuid(bpy.context))
             if isinstance(setting, float):
                 setting = round(setting, 4)
             if setting == self.default and self.isToggleable():
@@ -416,10 +413,6 @@ class UIElement():
         """
         self.setValue(settings, context=None)
 
-        # make sure to set toggable properties to checked - if the setting was changed, we want it
-        if self.isToggleable():
-            self.setIgnoreExport(True)
-
     def setValue(self, value:Any, context:bpy.types.Context=None) -> bool:
         if not self.settingid or self.settingid in self.hidden_settings:
             return False
@@ -428,9 +421,11 @@ class UIElement():
             return False
         if self.type == 'object':
             blend_scene_setattr(
-                *self.getValue(context), bool(value))
+                *self.get_env_uuid(context), bool(value))
+            return True
         if self.type == 'array':        #special case for colors: we need to strip the alpha color
             value = value[0:3]
+            return True
         if 'enum' in self.schema:
             enum_options = []
             for element in self.schema['enum']:
@@ -438,21 +433,27 @@ class UIElement():
             blend_scene_setattr_enum(bpy.types.Scene, self.settingid, self.uuid_dict,
                 bpy.props.EnumProperty(items=enum_options), self.path)
             blend_scene_setattr(
-                *self.getValue(context), value)
+                *self.get_env_uuid(context), value)
+            return True
         else:
             blend_scene_setattr(
-                *self.getValue(context), value)
+                *self.get_env_uuid(context), value)
         return True
 
-    def getValue(self, context:bpy.types.Context)-> tuple[Any,str]:
-        return blend_scene_getattr(context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+    def get_env_uuid(self, context:bpy.types.Context)-> tuple[Any,str]:
+        if not self.env_uuid or not self.check_scene(self.env_uuid[0]):
+            self.env_uuid = blend_scene_getattr(context.scene, self.settingid, self.type, self.path)
+        return self.env_uuid
+
+    def check_scene(self, scene:bpy.types.Scene) -> bool:
+        if scene and isinstance(scene, bpy.types.Scene):
+            try:
+                return scene.name in bpy.data.scenes
+            except Exception:
+                return False
 
     def setDefaultValue(self, context:bpy.types.Context):
         self.setValue(self.default, context)
-
-        # make sure to set toggable properties to unchecked
-        if self.isToggleable():
-            self.setIgnoreExport(False)
 
     def getParentElement(self) -> "UIElement":
         return self.parent_element
@@ -476,9 +477,6 @@ class UIElement():
     def getLevel(self) -> str:
         return self.schema.get("level", ProcessorPlugin.LEVELS[0])
 
-    def setIgnoreExport(self, value: bool):
-        pass
-
     def ignoreSettingExport(self) -> bool:
         """
         Returns True if the settings of the current element should not be exported.
@@ -488,7 +486,7 @@ class UIElement():
             return False
 
         # if the current element value is similar to its default, ignore
-        if "default" in self.schema and self.schema["default"] == self.getValue(bpy.context):
+        if "default" in self.schema and self.schema["default"] == self.get_env_uuid(bpy.context):
             return True
 
         # we never ignore the settings if the UI element is required in the output

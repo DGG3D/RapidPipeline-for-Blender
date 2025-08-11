@@ -1,0 +1,32 @@
+{
+    "uid"         : "MA2025052910",
+    "min_engine_version" : [7,4,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 8, "3ds Max" : 8, "blender" : 8, "UnrealEngine" : 8 },
+    "name"        : "Remove Occluded Parts",
+    "button_name" : "Remove Occluded Parts",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "Removes occluded parts from the 3D model, for the whole 3D model or individually for each mesh. Per triangle or per part. Option to treat transparent parts as occluders (ignore transparency).",
+    "explanation" : "Removes occluded parts from the 3D model, for the whole 3D model or individually for each mesh. Per triangle or per part. Option to treat transparent parts as occluders (ignore transparency).",
+    "exposed_options" : [
+        {
+            "name": "Culling Quality",
+            "description" : "Specify how thorough triangle visibility should be determined.",
+            "path": "meshCulling.occlusionCulling.quality"
+        },
+        {
+            "name": "Per Mesh",
+            "description" : "Switches visibility computation between per mesh or global for the entire (selected) model.",
+            "path": "meshCulling.occlusionCulling.perMesh"
+        },
+        {
+            "name": "Ignore Transparency",
+            "description" : "Culling will not consider geometry as visible anymore, if occluded by geometry associated with transparent materials.",
+            "path": "meshCulling.occlusionCulling.ignoreTransparency"
+        },
+        {
+            "name": "Visibility Per Part",
+            "description" : "If set, visibility is decided per part (mesh lump), otherwise per triangle.",
+            "path": "meshCulling.occlusionCulling.perLumpDecision"
+        }
+   ]
+}

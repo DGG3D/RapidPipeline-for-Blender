@@ -30,6 +30,12 @@ process) for further information.
 import os
 import textwrap
 
+try:
+    import tomllib
+except ModuleNotFoundError:
+    pass
+
+
 import bpy  # type: ignore
 
 from .gui_commons import parseTextFile
@@ -38,13 +44,21 @@ from .license_manager import OpenLinkOperator
 
 class OverrideTokenOperator(bpy.types.Operator):
     bl_idname = "processor.override_token"
-    bl_description = "Override API Token"
-    bl_label = "Override API Token"
+    bl_description = "Enter Authentication Token"
+    bl_label = "Enter Authentication Token"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context:bpy.types.Context) -> set[str]:
-        bpy.types.Scene.has_license = False
-        bpy.types.Scene.override_token = True
+        if not context.scene.override_token:
+            # first click opens the token dialog
+            bpy.types.Scene.has_license = False
+            bpy.types.Scene.override_token = True
+            bpy.types.Scene.rpde_draw_ui = False
+        else:
+            # click on the button again should close the window
+            bpy.types.Scene.has_license = True
+            bpy.types.Scene.override_token = False
+            bpy.types.Scene.rpde_draw_ui = True
         return {'FINISHED'}
 
 
@@ -85,8 +99,18 @@ class AboutDialogPanel(bpy.types.Panel):
     def draw(self, context:bpy.types.Context):
         layout = self.layout
         panel_layout = layout.row()
-
-        panel_layout.operator(OverrideTokenOperator.bl_idname, text="Override CLI API Token")
+        panel_layout = layout.row()
+        dirname = os.path.dirname(__file__)
+        blender_manifest = os.path.join(dirname, 'blender_manifest.toml')
+        try:
+            with open(blender_manifest, 'rb') as f:
+                blender_manifest = tomllib.load(f)
+            blender_plugin_info = f"Blender Plugin Version: {blender_manifest['version']}"
+            panel_layout.label(text=blender_plugin_info)
+        except:
+            pass
+        panel_layout = layout.row()
+        panel_layout = layout.row()
         panel_layout = layout.row()
         op = panel_layout.operator(OpenLinkOperator.bl_idname, text="Terms and Conditions", icon='URL')
         op.url = "https://rapidpipeline.com/en/general-terms-and-conditions"
@@ -98,7 +122,7 @@ class AboutDialogPanel(bpy.types.Panel):
 
 class AboutDialog(bpy.types.Operator):
     bl_idname = "processor.about_dialog"
-    bl_description = "Override API Token and see copyright disclaimer"
+    bl_description = "See copyright disclaimer"
     bl_label = "About"
     bl_options = {'REGISTER', 'UNDO'}
 

@@ -1,0 +1,44 @@
+{
+    "uid"         : "MA2025052904",
+    "min_engine_version" : [7,4,0],
+    "ui_prio_hints" : { "Substance" : 0, "Maya" : -1, "3ds Max" : -1, "blender" : -1, "UnrealEngine" : -1 },
+    "name"        : "Paintable UVs per Material",
+    "button_name" : "Paintable UVs per Material",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "Imports a 3D/CAD model and assigns paintable UVs per Material. Materials are kept retaining any Material Colors and Names. UVs are non-overlapping and global.",
+    "explanation" : "Imports a 3D/CAD model and assigns paintable UVs per Material. Materials are kept retaining any Material Colors and Names. UVs are non-overlapping and global.",
+    "exposed_options" : [
+        {
+            "name": "Convert Z-Up to Y-Up",
+            "description" : "Turns rotation to z-axis pointing upwards on/off. Helpful if origin axis system is Z-Up and target system is Y-Up.",
+            "path": "import.general.rotateZUp"
+        },
+        {
+            "name": "CAD Sewing Tolerance",
+            "description" : "Helps with sewing CAD surface patches before conversion into triangles (tessellation). By default it is set to 0.05 mm, meaning if two surfaces have a gap greater than 0.05mm, they will not be sewed.",
+            "path": "import.CAD.sewTolerance"
+        },
+        {
+            "name": "Fix Winding Order",
+            "description" : "Automatically fix the winding order of parts on import.",
+            "path": "3dEdit.repair.windingOrder",
+            "toggled": false
+        },
+        {
+            "name": "Remove Occluded Parts",
+            "description" : "Removes invisible (occluded) parts from the 3D model on import.",
+            "path": "meshCulling.occlusionCulling",
+            "toggled": false
+        },
+		{
+            "name": "Simplify with UVs",
+            "description" : "Simplify mesh to a certain amount of faces, while preserving UVs.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.target.faces.value"
+		},
+        {
+            "name": "Merge Meshes per Material",
+            "description" : "Merging of mesh nodes. Default is no merging (none) potentially resulting in multi-material assignments - byMaterial will merge meshes per material but will replace original node names if needed.",
+            "path": "sceneGraphFlattening.method"
+        }
+]
+}

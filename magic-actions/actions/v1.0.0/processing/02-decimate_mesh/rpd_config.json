@@ -1,0 +1,29 @@
+{
+    "export": [],
+    "optimize": {
+        "3dModelOptimizationMethod": {
+            "meshAndMaterialOptimization": {
+                "decimator": {
+                    "materialOptimization": {
+                        "keepMaterialsUVs": {}
+                    },
+                    "target": {
+                        "faces": {
+                            "value": 150000
+                        },
+                        "deviation": {
+                            "percentage": 0.005
+                        }
+                    },
+                    "preserveNormals": true,
+                    "preserveTopology": false
+                }
+            }
+        }
+    },
+  "modifier": {
+    "screensize": {
+      "pixelTarget": 0
+    }
+  }
+}

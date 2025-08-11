@@ -1,0 +1,62 @@
+{
+    "uid"                : "MA2025052913",
+    "min_engine_version" : [7,1,0],
+    "ui_prio_hints"      : { "Substance" : -1, "Maya" : 0, "3ds Max" : 0, "blender" : 0, "UnrealEngine" : 0 },
+    "name"               : "Import 3D Format",
+    "button_name"        : "Import 3D Format",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long"  : "Imports a 3D model from any supported file format into the application.",
+    "explanation"        : "Imports a 3D model from any supported file format into the application.",
+    "exposed_options" : [
+        {
+            "name": "Convert Z- to Y-Up",
+            "description" : "Turns rotation to z-axis pointing upwards on/off. Helpful if origin axis system is Z-Up and target system is Y-Up.",
+            "path": "import.general.rotateZUp"
+        },
+        {
+            "name": "FBX Normal Map Y Flip",
+            "description" : "Flip normalmaps Y axis on import. Only affects fbx data.",
+            "path": "import.general.normalmapYFlip"
+        },
+        {
+            "name": "USD Profile",
+            "description" : "Defines how input USD files are interpreted.",
+            "path": "import.USD.profile"
+        },
+        {
+            "name": "USD Purpose",
+            "description" : "Defines the purpose of rendering a prim, used to control render visibility and classify prims into visibility categories.",
+            "path": "import.USD.purpose"
+        },
+        {
+            "name": "USD Convert Display Colors",
+            "description" : "How to convert USD display colors. Into material colors or vertex colors.",
+            "path": "import.USD.convertDisplayColors"
+        },
+        {
+            "name": "Discard Cameras",
+            "description" : "If set, discards any cameras on import.",
+            "path": "import.discard.cameras"
+        },
+        {
+            "name": "Discard Lights",
+            "description" : "If set, discards any lights on import. Currently only glTF point lights are supported.",
+            "path": "import.discard.lights"
+        },
+        {
+            "name": "Discard Animations",
+            "description" : "If set, discards any animations on import.",
+            "path": "import.discard.animations"
+        },
+        {
+            "name": "Discard Morph Targets",
+            "description" : "If set, discards any morph targets (blend shapes) on import.",
+            "path": "import.discard.morphTargets"
+        },
+        {
+            "name": "Discard unused UVs",
+            "description" : "If set, discards any unused UVs on import. Unused UVs are defined as UVs not associated with any texture map.",
+            "path": "import.discard.unusedUVs"
+        }
+    ]
+}

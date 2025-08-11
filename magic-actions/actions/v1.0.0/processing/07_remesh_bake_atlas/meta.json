@@ -1,0 +1,53 @@
+{
+    "uid"         : "MA2025052907",
+    "min_engine_version" : [7,3,1],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 5, "3ds Max" : 5, "blender" : 5, "UnrealEngine" : 5 },
+    "name"        : "Remesh and Bake Atlas",
+    "button_name" : "Remesh and Bake Atlas",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "Remeshes to a lower face count, creates a UV atlas and bakes material properties such as color, normals, and occlusion into textures. This improves performance for real-time assets in games or XR.",    
+    "explanation" : "Remeshes to a lower face count, creates a UV atlas and bakes material properties such as color, normals, and occlusion into textures. This improves performance for real-time assets in games or XR.",
+    "exposed_options" : [
+        {
+            "name": "Texture Baking Resolution",
+            "description" : "Steers the Resolution of the baked textures, default is 4096x4096 pixels.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.bakingResolution.default"
+        },
+        {
+            "name": "Bake Occlusion Map",
+            "description" : "Bakes ambient occlusion map for the whole model. If UVs are preserved, the occlusion is baked into the 2nd UV set.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.aoBaker",
+            "toggled": false
+        },
+        {
+            "name": "Texture Resolution Auto Scaling",
+            "description" : "If set, the texture resolution only applies to the largest atlas in terms of occupied 3D surface, smaller atlases will receive a smaller power of 2 resolutions depending on their mesh size in 3D.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.texMapAutoScaling"
+        },
+        {
+            "name": "Face Target",
+            "description" : "The target amount of faces (triangles), default is 50,000 triangles.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.target.faces.value"
+        },
+        {
+            "name": "Remeshing Resolution",
+            "description" : "Initial mesh resolution before face target is applied. High resolutions (max 11) capture more surface detail, lower resolutions (e.g. 6) simplify more (including closing of holes in the mesh).",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.resolution"
+        },
+        {
+            "name": "Remeshing Mode",
+            "description" : "Decides if remeshing creates one mesh, separate meshes, or according to a method; byOpacity remeshes alpha parts separately, byMaterial remeshes parts associated with different materials separately.",
+            "path": "sceneGraphFlattening.method"
+        },
+        {
+            "name": "Atlas Mode",
+            "description" : "Mode used to assign atlases. By default atlases are separated by opacity (separateAlpha), separateMaterials creates an atlas per material for all meshes associated with them.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.atlasMode"
+        },
+        {
+            "name": "Multiple Atlas Factor",
+            "description" : "Divide each atlas into new atlases. This leads to duplicated atlas count which paired with a low texture resolution (2k) can be a good alternative to fewer atlases with higher texture resolution (4k).",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.atlasFactor"
+        }
+    ]
+}

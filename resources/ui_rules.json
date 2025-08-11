@@ -27,7 +27,8 @@
             "meshCulling",
             "optimize",
             "sceneGraphFlattening",
-            "outcomeModifier"
+            "outcomeModifier",
+            "fileExport"
         ]
     }
 }

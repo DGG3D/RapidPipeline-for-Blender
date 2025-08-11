@@ -1,6 +1,6 @@
 {
   "title": "RapidPipeline 3D Processing Schema",
-  "version": "1.3",
+  "version": "1.4",
   "properties": {
     "version": {
       "type": "number",
@@ -73,6 +73,20 @@
               "title": "USD Purpose",
               "description": "Defines the purpose of rendering a prim, used to control render visibility and classify prims into visibility categories",
               "toggleable": false
+            },
+            "convertDisplayColors": {
+              "enum": [
+                "never",
+                "auto",
+                "vcolor",
+                "mtcolor"
+              ],
+              "level": "expert",
+              "settingid": "import:convertDisplayColors",
+              "default": "never",
+              "title": "Convert Display Colors",
+              "description": "How to convert USD display colors",
+              "toggleable": false
             }
           },
           "additionalProperties": false,
@@ -82,6 +96,23 @@
           "title": "USD Import Settings",
           "description": "Settings applied to all usd file imports",
           "toggleable": false
+        },
+        "FBX": {
+          "properties": {
+            "stripColonNamespaces": {
+              "type": "boolean",
+              "level": "expert",
+              "settingid": "import:fbxStripColonNamespaces",
+              "default": false,
+              "title": "Strip Colon Namespaces",
+              "description": "if true, filters out Maya-style namespaces from nodes and materials (experimental)",
+              "toggleable": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "level": "basic",
+          "settingid": "import:fbx"
         },
         "CAD": {
           "properties": {
@@ -289,6 +320,20 @@
           "title": "Preserved Scene Depth Level",
           "description": "number of layers in the scene structure that should not be flattened",
           "toggleable": false
+        },
+        "splitMode": {
+          "enum": [
+            "auto",
+            "none",
+            "byOpacity",
+            "byMaterial"
+          ],
+          "level": "advanced",
+          "settingid": "compact:splitMode",
+          "default": "auto",
+          "title": "Multi-Material Split Mode",
+          "description": "allows the splitting of multi-material meshes according to the specified mode",
+          "toggleable": false
         }
       },
       "additionalProperties": false,
@@ -419,6 +464,18 @@
                                       "default": 1.0,
                                       "title": "Cube UV Scale",
                                       "description": "scale factor for the cube unwrapping method",
+                                      "toggleable": false
+                                    },
+                                    "sourceSpace3D": {
+                                      "enum": [
+                                        "mesh",
+                                        "world"
+                                      ],
+                                      "level": "advanced",
+                                      "settingid": "cubeUnwrapSourceSpace3D",
+                                      "default": "world",
+                                      "title": "Source Space 3D",
+                                      "description": "3D space used for projecting the UVs",
                                       "toggleable": false
                                     }
                                   },
@@ -1086,6 +1143,29 @@
               "description": "Merges input models close vertices with a given threshold",
               "toggleable": true
             },
+            "meshMerging": {
+              "properties": {
+                "mode": {
+                  "enum": [
+                    "all",
+                    "byMaterial"
+                  ],
+                  "level": "advanced",
+                  "settingid": "mergeMeshesMethod",
+                  "default": "byMaterial",
+                  "title": "Method",
+                  "description": "Method used to merge the meshes. 'byMaterial' only merges meshes if they use the same material",
+                  "toggleable": false
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "level": "advanced",
+              "settingid": "mergeMeshes",
+              "title": "Merge Meshes",
+              "description": "Merges meshes with common edges",
+              "toggleable": true
+            },
             "windingOrder": {
               "properties": {
                 "visibilityMode": {
@@ -1099,6 +1179,24 @@
                   "title": "Visibility Mode",
                   "description": "Set how visibility is computed",
                   "toggleable": false
+                },
+                "ignoreTransparency": {
+                  "type": "boolean",
+                  "level": "advanced",
+                  "settingid": "windingOrderIgnoreTransparency",
+                  "default": false,
+                  "title": "Ignore Transparency",
+                  "description": "Decides whether visibility includes non-opaque meshes",
+                  "toggleable": false
+                },
+                "perLump": {
+                  "type": "boolean",
+                  "level": "advanced",
+                  "settingid": "windingOrderPerLump",
+                  "default": true,
+                  "title": "Per Lump",
+                  "description": "Decides whether winding order of lumps of geometry are flipped as one or per triangle",
+                  "toggleable": false
                 }
               },
               "additionalProperties": false,
@@ -1106,8 +1204,8 @@
               "level": "basic",
               "settingid": "fixWindingOrder",
               "title": "Fix Winding Order",
-              "description": "Automatically fip the winding order of triangles or parts (mesh lumps) according to certain metrics",
-              "toggleable": false
+              "description": "Automatically flip the winding order of triangles or parts (mesh lumps) according to certain metrics",
+              "toggleable": true
             }
           },
           "additionalProperties": false,
@@ -1191,6 +1289,26 @@
               "default": true,
               "title": "Sample Edges",
               "description": "Defines if edges should be sampled during visibility computation",
+              "toggleable": false
+            },
+            "perLumpDecision": {
+              "type": "boolean",
+              "level": "advanced",
+              "settingid": "visibility:perLumpDecision",
+              "default": false,
+              "title": "Per Lump",
+              "description": "If false, visibility is decided per triangle, otherwise per lump",
+              "toggleable": false
+            },
+            "lumpThreshold": {
+              "type": "number",
+              "level": "advanced",
+              "settingid": "visibilityLumpThreshold",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "default": 0.6,
+              "title": "Lump Threshold",
+              "description": "Threshold in percent based on number of visible triangles",
               "toggleable": false
             }
           },
@@ -1456,7 +1574,7 @@
                               "toggleable": false
                             },
                             "materialOptimization": {
-                              "$ref": "#/$defs/__ref_188__"
+                              "$ref": "#/$defs/__ref_198__"
                             },
                             "preserveTopology": {
                               "type": "boolean",
@@ -1672,7 +1790,7 @@
                             "materialMerger": {
                               "properties": {
                                 "materialRegenerator": {
-                                  "$ref": "#/$defs/__ref_171__"
+                                  "$ref": "#/$defs/__ref_181__"
                                 },
                                 "materialMergingMethod": {
                                   "enum": [
@@ -1766,7 +1884,7 @@
               "additionalProperties": false,
               "properties": {
                 "onlyMaterial": {
-                  "$ref": "#/$defs/__ref_188__"
+                  "$ref": "#/$defs/__ref_198__"
                 }
               },
               "settingid": "modelOptimizationMethod_onlyMaterial",
@@ -1811,7 +1929,7 @@
       "type": "object",
       "level": "basic",
       "settingid": "optimize",
-      "title": "Optimize",
+      "title": "Optimize/Bake",
       "description": "Optimization of mesh and material data, including options for decimation, remeshing, texture atlas baking, uv aggregation, and more.",
       "toggleable": true
     },
@@ -2501,6 +2619,18 @@
                         "description": "Settings for the 3ds Max Physical Material",
                         "toggleable": false
                       },
+                      "preferredMaterialModel": {
+                        "enum": [
+                          "3dsMaxPhysicalMaterial",
+                          "mayaStandardMaterial"
+                        ],
+                        "level": "advanced",
+                        "settingid": "export:preferredMaterialModel",
+                        "default": "3dsMaxPhysicalMaterial",
+                        "title": "Preferred Material Model",
+                        "description": "selects the material model used for export (experimental)",
+                        "toggleable": false
+                      },
                       "units": {
                         "enum": [
                           "mm",
@@ -2978,7 +3108,7 @@
                   "ply": {
                     "properties": {
                       "defaultMaterial": {
-                        "$ref": "#/$defs/__ref_236__"
+                        "$ref": "#/$defs/__ref_247__"
                       },
                       "preferBinaryFormat": {
                         "type": "boolean",
@@ -3010,7 +3140,7 @@
                   "ctm": {
                     "properties": {
                       "defaultMaterial": {
-                        "$ref": "#/$defs/__ref_236__"
+                        "$ref": "#/$defs/__ref_247__"
                       }
                     },
                     "additionalProperties": false,
@@ -3081,7 +3211,7 @@
   "level": "basic",
   "settingid": "3dProcessor",
   "$defs": {
-    "__ref_180__": {
+    "__ref_190__": {
       "properties": {
         "default": {
           "type": "number",
@@ -3400,7 +3530,7 @@
       "description": "Use thresholds for dropping nearly-uniform texture maps",
       "toggleable": true
     },
-    "__ref_183__": {
+    "__ref_193__": {
       "properties": {
         "textureBaker2ndUV": {
           "properties": {
@@ -3659,7 +3789,7 @@
           "type": "integer",
           "level": "basic",
           "settingid": "compact:atlasingFactor",
-          "minimum": 0,
+          "minimum": 1,
           "maximum": 16,
           "default": 1,
           "title": "Multiple Atlas Factor",
@@ -3685,7 +3815,7 @@
       "description": "Optionally add a UV Checker Texture",
       "toggleable": false
     },
-    "__ref_171__": {
+    "__ref_181__": {
       "oneOf": [
         {
           "additionalProperties": false,
@@ -4638,7 +4768,7 @@
                   "type": "integer",
                   "level": "basic",
                   "settingid": "compact:atlasingFactor",
-                  "minimum": 0,
+                  "minimum": 1,
                   "maximum": 16,
                   "default": 1,
                   "title": "Multiple Atlas Factor",
@@ -4692,6 +4822,18 @@
                                       "default": 1.0,
                                       "title": "Cube UV Scale",
                                       "description": "scale factor for the cube unwrapping method",
+                                      "toggleable": false
+                                    },
+                                    "sourceSpace3D": {
+                                      "enum": [
+                                        "mesh",
+                                        "world"
+                                      ],
+                                      "level": "advanced",
+                                      "settingid": "cubeUnwrapSourceSpace3D",
+                                      "default": "world",
+                                      "title": "Source Space 3D",
+                                      "description": "3D space used for projecting the UVs",
                                       "toggleable": false
                                     }
                                   },
@@ -5267,7 +5409,7 @@
       "description": "makes sure the merged or otherwise altered materials are inheriting the original material properties or alternatively get assigned new materials and Uvs",
       "toggleable": false
     },
-    "__ref_188__": {
+    "__ref_198__": {
       "oneOf": [
         {
           "additionalProperties": false,
@@ -5275,10 +5417,10 @@
             "keepMaterialsUVs": {
               "properties": {
                 "dropTextures": {
-                  "$ref": "#/$defs/__ref_180__"
+                  "$ref": "#/$defs/__ref_190__"
                 },
                 "atlasGenerator2ndUV": {
-                  "$ref": "#/$defs/__ref_183__"
+                  "$ref": "#/$defs/__ref_193__"
                 },
                 "forceNormalRebaking": {
                   "type": "boolean",
@@ -5310,7 +5452,7 @@
             "materialMerger": {
               "properties": {
                 "materialRegenerator": {
-                  "$ref": "#/$defs/__ref_171__"
+                  "$ref": "#/$defs/__ref_181__"
                 },
                 "materialMergingMethod": {
                   "enum": [
@@ -5367,10 +5509,10 @@
             "materialUVAggregator": {
               "properties": {
                 "dropTextures": {
-                  "$ref": "#/$defs/__ref_180__"
+                  "$ref": "#/$defs/__ref_190__"
                 },
                 "atlasGenerator2ndUV": {
-                  "$ref": "#/$defs/__ref_183__"
+                  "$ref": "#/$defs/__ref_193__"
                 },
                 "allowRectangularAtlases": {
                   "type": "boolean",
@@ -7393,6 +7535,15 @@
           "description": "desired USD system unit",
           "toggleable": false
         },
+        "singleIndexed": {
+          "type": "boolean",
+          "level": "expert",
+          "settingid": "export:usdSingleIndexed",
+          "default": false,
+          "title": "USD Single Indexed",
+          "description": "Writes out usd files single indexed or not",
+          "toggleable": false
+        },
         "excludeTangents": {
           "type": "boolean",
           "level": "advanced",
@@ -7420,7 +7571,7 @@
       "description": "Writes out and sets settings for the Universal Scene Description Format - usd",
       "toggleable": false
     },
-    "__ref_236__": {
+    "__ref_247__": {
       "properties": {
         "textureFormat": {
           "properties": {

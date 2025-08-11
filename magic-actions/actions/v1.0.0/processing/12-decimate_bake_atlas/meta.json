@@ -1,0 +1,63 @@
+{
+    "uid"         : "MA2025052912",
+    "min_engine_version" : [7,4,1],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 4, "3ds Max" : 4, "blender" : 4, "UnrealEngine" : 4 },
+    "name"        : "Decimate and Bake Atlas",
+    "button_name" : "Decimate and Bake Atlas",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "Decimates to a lower face count, creates a UV atlas and bakes material properties such as color, normals, and occlusion into textures. This improves performance for real-time assets in games or XR.",
+    "explanation" : "Decimates to a lower face count, creates a UV atlas and bakes material properties such as color, normals, and occlusion into textures. This improves performance for real-time assets in games or XR.",
+    "exposed_options" : [
+        {
+            "name": "Texture Baking Resolution",
+            "description" : "Steers the Resolution of the baked textures, default is 4096x4096 pixels.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.bakingResolution.default"
+        },
+        {
+            "name": "Bake Occlusion Map",
+            "description" : "Bakes ambient occlusion map for the whole model. If UVs are preserved, the occlusion is baked into the 2nd UV set.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.aoBaker",
+            "toggled": false
+        },
+        {
+            "name": "Texture Resolution Auto Scaling",
+            "description" : "If set, the texture resolution only applies to the largest atlas in terms of occupied 3D surface, smaller atlases will receive a smaller power of 2 resolutions depending on their mesh size in 3D.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.texMapAutoScaling"
+        },
+        {
+            "name": "Face Target",
+            "description" : "The target amount of faces (triangles), default is 200,000 triangles.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.target.faces.value"
+        },
+        {
+            "name": "Deviation Percentage",
+            "description" : "Target percentage of deviation relative to the original mesh. Works in conjunction with face target as a cap, depending on that the final face count can be lower or equal to the face count.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.target.deviation.percentage"
+        },
+        {
+            "name": "Size on Screen Target",
+            "description" : "Calculates optimal mesh and texture resolution for a given display size on screen in pixel. This method is optional and can work standalone or in conjunction with other targets. Default is 0 (=off).",
+            "path": "modifier.screensize.pixelTarget"
+        },
+        {
+            "name": "Preserve Tiling",
+            "description" : "Preserves repeating texture coordinates (UVs) and associated texture maps. UVs are considered tiling if they extend beyond 0-1 UV space.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.keepTiledUVs"
+        },
+        {
+            "name": "Atlas Mode",
+            "description" : "Mode used to assign atlases. By default atlases are separated by opacity (separateAlpha), separateMaterials creates an atlas per material for all meshes associated with them.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.materialRegenerator.uvAtlasGenerator.atlasMode"
+        },
+        {
+            "name": "Multiple Atlas Factor",
+            "description" : "Divide each atlas into new atlases. This leads to duplicated atlas count which paired with a low texture resolution (2k) can be a good alternative to fewer atlases with higher texture resolution (4k).",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.materialRegenerator.uvAtlasGenerator.atlasFactor"
+        },
+        {
+            "name": "Mesh and Material Merging",
+            "description" : "Merging of nodes before decimation. Full merge vs none (no merge), or byOpacity leaving alpha parts separately, byMaterial will keep parts associated with different materials separate.",
+            "path": "sceneGraphFlattening.method"
+        }
+    ]
+}

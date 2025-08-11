@@ -1,0 +1,37 @@
+{
+    "uid"         : "MA2025052902",
+    "min_engine_version" : [7,4,1],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 2, "3ds Max" : 2, "blender" : 2, "UnrealEngine" : 3 },
+    "name"        : "Decimate Mesh",
+    "button_name" : "Decimate Mesh",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "Simplifies a mesh by reducing the number of faces while preserving materials, UVs and textures. This is useful for reducing file size and improving performance by reducing memory usage.",
+    "explanation" : "Simplifies a mesh by reducing the number of faces while preserving materials, UVs and textures. This is useful for reducing file size and improving performance by reducing memory usage.",
+    "exposed_options" : [
+        {
+            "name": "Face Target",
+            "description" : "The target amount of faces (triangles), default is 200,000 triangles.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.target.faces.value"
+        },
+        {
+            "name": "Deviation Percentage",
+            "description" : "Target percentage of deviation relative to the original mesh. Works in conjunction with face target as a cap, depending on deviation the final face count can be lower or equal to the face count.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.target.deviation.percentage"
+        },
+        {
+            "name": "Size on Screen Target",
+            "description" : "Calculates optimal mesh and texture resolution for a given display size on screen in pixel. This method is optional and can work standalone or in conjunction with other targets. Default is 0 (=off).",
+            "path": "modifier.screensize.pixelTarget"
+        },
+        {
+            "name": "Preserve Mesh Normals",
+            "description" : "Preserves vertex normals during decimation. This acts as a constraint on the decimation and thus the desired face target might not be reached.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.preserveNormals"
+        },
+        {
+            "name": "Preserve Topology",
+            "description" : "Preserves topological features like holes during decimation. This acts as a constraint on the decimation and thus the desired face target might not be reached.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.preserveTopology"
+        }
+    ]
+}

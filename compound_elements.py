@@ -65,6 +65,10 @@ def init_ui_element(
                 ui_elements_dict[get_uuid(oneof_path)] = created_oneof
                 parent.child_elements.append(created_oneof)
 
+        #case only for export
+        if "items" in schema and settingid == "exportArray":
+            init_ui_element(name, settingid, parent, uuid_dict, schema["items"])
+
         if "type" in schema:
             if schema["type"] == "boolean":
                 created_property = BooleanProperty(name, settingid, parent, uuid_dict, schema)
@@ -93,7 +97,7 @@ def init_ui_element(
         elif "enum" in schema and schema["enum"]:
             created_property = EnumProperty(name, settingid, parent, uuid_dict, schema)
         elif "oneOf" in parent.schema:
-            created_property = EmptyCompoundUIElement(name, settingid, parent, uuid_dict, schema)
+            created_property = OneOfContainer(name, settingid, parent, uuid_dict, schema)
         else:
             print("no oneof, type or enum found. Creating empty schema object")
             created_property = EmptySchemaObject(name, settingid, parent, uuid_dict, schema)
@@ -162,12 +166,12 @@ class CompoundUIElement(UIElement):
     def setValue(self, value:Any, context:bpy.types.Context) -> bool:
         return super().setValue(bool(value), context)
 
-    def getValue(self, context:bpy.types.Context)-> tuple[Any,str]:
-        return super().getValue(context)
+    def get_env_uuid(self, context:bpy.types.Context)-> tuple[Any,str]:
+        return super().get_env_uuid(context)
 
     def getSettings(self) -> dict:
         out_settings = {}
-        if (getattr(*blend_scene_getattr(bpy.context.scene, self.settingid, self.uuid_dict, self.type, self.path))) or (
+        if (getattr(*blend_scene_getattr(bpy.context.scene, self.settingid, self.type, self.path))) or (
             # check for empty properties specifically for "addcheckertexture"
             not self.isToggleable() and self.schema.get("properties", {}) != {}):
             for e in self.child_elements:
@@ -181,6 +185,11 @@ class CompoundUIElement(UIElement):
                                 continue
                         else:
                             out_settings[e.name] = settings
+                    else:
+                        # case for empty children of oneOfs (like with type:stl in export)
+                        toggle_children = getattr(*blend_scene_getattr(bpy.context.scene, e.settingid, e.type, e.path))
+                        if not out_settings and toggle_children:
+                            return {e.name : {}}
             return out_settings
         else:
             return None
@@ -192,19 +201,6 @@ class CompoundUIElement(UIElement):
         child_by_name = {c.name: c for c in self.child_elements}
         for s in settings:
             child_by_name[s].setSettings(settings[s])
-
-        # make sure to set toggable properties to checked - if the setting was changed, we want it
-        if self.isToggleable():
-            self.setIgnoreExport(True)
-
-    def setDefaultValue(self, context:bpy.types.Context):
-        """
-        Unless otherwise specified, CompoundElements don't have a default value, so we only uncheck them.
-        """
-        super().setDefaultValue(context)
-        # make sure to set toggable properties to unchecked
-        if self.isToggleable():
-            self.setIgnoreExport(False)
 
 class SimpleContainerOperator(bpy.types.Operator):
     bl_idname = "processor.simplecontainer"
@@ -247,12 +243,12 @@ class SimpleContainer(CompoundUIElement):
         self.setValue(False, context)
 
     def setValue(self, value:bool, context:bpy.types.Context):
-        blend_scene_setattr(*self.getValue(context), bool(value))
+        blend_scene_setattr(*self.get_env_uuid(context), bool(value))
 
-    def getValue(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
-        return blend_scene_getattr(bpy.context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+    def get_env_uuid(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
+        return blend_scene_getattr(bpy.context.scene, self.settingid, self.type, self.path)
 
-class EmptyCompoundUIElement(CompoundUIElement):
+class OneOfContainer(CompoundUIElement):
     def __init__(self, name: str, settingid: str, parent: "UIElement", uuid_dict:dict, schema: dict = {}):
         super().__init__(name, settingid, parent, schema, uuid_dict, "object")
         self.createChildElements()
@@ -265,11 +261,11 @@ class EmptyCompoundUIElement(CompoundUIElement):
             return
         if "oneOf" not in self.schema:
             panel_layout = panel.layout.row()
-            prop_env, attribute = self.getValue(context)
+            prop_env, attribute = self.get_env_uuid(context)
             blend_create_prop(panel_layout, prop_env, attribute, self.title)
 
     def getSettings(self) -> dict:
-        if not getattr(*self.getValue(context=bpy.context)):
+        if not getattr(*self.get_env_uuid(context=bpy.context)):
             # check if Oneof widget is toggled on
             if isinstance(self.parent_element, OneOfWidget):
                 if self.parent_element.isToggleable():
@@ -289,8 +285,8 @@ class EmptyCompoundUIElement(CompoundUIElement):
                 return out_settings
 
         if 'oneOf' in self.schema:
-            if getattr(*self.getValue(context=bpy.context)) and (
-                getattr(*self.parent_element.getValue(context=bpy.context))):
+            if getattr(*self.get_env_uuid(context=bpy.context)) and (
+                getattr(*self.parent_element.get_env_uuid(context=bpy.context))):
                 current_element = self.getCurrentUIElement()
                 for child in self.child_elements:
                     if child.settingid == current_element:
@@ -314,10 +310,10 @@ class EmptyCompoundUIElement(CompoundUIElement):
             oneof_path = self.path.copy()
             oneof_path.append("Oneof")
             attribute_env, attribute = blend_scene_getattr(
-                bpy.context.scene, self.settingid, self.uuid_dict, self.type, oneof_path)
+                bpy.context.scene, self.settingid, self.type, oneof_path)
         else:
             attribute_env, attribute = blend_scene_getattr(
-                bpy.context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+                bpy.context.scene, self.settingid, self.type, self.path)
         return getattr(attribute_env, attribute)
 
     def setValue(self, value:Any, context:bpy.types.Context) -> bool:
@@ -326,16 +322,84 @@ class EmptyCompoundUIElement(CompoundUIElement):
             oneof_path = self.path.copy()
             oneof_path.append("Oneof")
             attribute_env, attribute = blend_scene_getattr(
-                bpy.context.scene, self.settingid, self.uuid_dict, self.type, oneof_path)
+                bpy.context.scene, self.settingid, self.type, oneof_path)
             #find the correct enum:
             possible_enums = bpy.context.scene.bl_rna.properties[str(attribute)].enum_items
             for enum in possible_enums:
                 if value and value in enum.identifier:
                     setattr(attribute_env, attribute, enum.identifier)
 
-        # make sure to set toggable properties to checked - if the setting was changed, we want it
-        if self.isToggleable():
-            self.setIgnoreExport(True)
+        # in any case set UIElement to true
+        return super().setValue(bool(value), context)
+
+
+class EmptyCompoundUIElement(CompoundUIElement):
+    def __init__(self, name: str, settingid: str, parent: "UIElement", uuid_dict:dict, schema: dict = {}):
+        super().__init__(name, settingid, parent, schema, uuid_dict, "object")
+        self.createChildElements()
+
+    def isdrawn(self) -> bool:
+        return super().isdrawn()
+
+    def draw_on_panel(self, layout:bpy.types.UILayout, context:bpy.types.Context, panel:bpy.types.Panel):
+        if not self.isdrawn():
+            return
+        if "oneOf" not in self.schema:
+            panel_layout = panel.layout.row()
+            prop_env, attribute = self.get_env_uuid(context)
+            blend_create_prop(panel_layout, prop_env, attribute, self.title)
+
+    def getSettings(self) -> dict:
+        if not getattr(*self.get_env_uuid(context=bpy.context)):
+            # check if Oneof widget is toggled on
+            if isinstance(self.parent_element, OneOfWidget):
+                if self.parent_element.isToggleable():
+                    return None
+                out_settings = {}
+                for e in self.child_elements:
+                    if e.name and not e.ignoreSettingExport():
+                        settings = e.getSettings()
+                        if settings is not None:
+                            if isinstance(settings, dict):
+                                if bool(settings):
+                                    out_settings[e.name] = settings
+                                else:
+                                    continue
+                            else:
+                                out_settings[e.name] = settings
+                return out_settings
+
+    def setDefaultValue(self, context:bpy.types.Context) -> None:
+        if self.default:
+            return super().setDefaultValue(context)
+        else:
+            self.setValue(False, context)
+
+    #get settingid of selected child
+    def getCurrentUIElement(self) -> str:
+        if 'oneOf' in self.schema:
+            oneof_path = self.path.copy()
+            oneof_path.append("Oneof")
+            attribute_env, attribute = blend_scene_getattr(
+                bpy.context.scene, self.settingid, self.type, oneof_path)
+        else:
+            attribute_env, attribute = blend_scene_getattr(
+                bpy.context.scene, self.settingid, self.type, self.path)
+        return getattr(attribute_env, attribute)
+
+    def setValue(self, value:Any, context:bpy.types.Context) -> bool:
+        return super().setValue(bool(value), context)
+        # set oneOf to correct value:
+        if 'oneOf' in self.schema:
+            oneof_path = self.path.copy()
+            oneof_path.append("Oneof")
+            attribute_env, attribute = blend_scene_getattr(
+                bpy.context.scene, self.settingid, self.type, oneof_path)
+            #find the correct enum:
+            possible_enums = bpy.context.scene.bl_rna.properties[str(attribute)].enum_items
+            for enum in possible_enums:
+                if value and value in enum.identifier:
+                    setattr(attribute_env, attribute, enum.identifier)
 
         # in any case set UIElement to true
         return super().setValue(bool(value), context)
@@ -399,7 +463,7 @@ def check_parents_drawn(parent_element:UIElement, parent_panel:bpy.types.Panel, 
     if parent_element:
         if parent_element.isToggleable():
             parent_elment_value = blend_scene_getattr(
-                context.scene, parent_element.settingid, parent_element.uuid_dict,
+                context.scene, parent_element.settingid,
                 parent_element.type, parent_element.path)
             if not getattr(*parent_elment_value):
                 return False # parent disabled
@@ -438,7 +502,7 @@ class GroupPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
-        if context.scene.rpde_running or not context.scene.has_license or context.scene.rpde_UI_error:
+        if context.scene.rpde_running or context.scene.rpde_UI_error:
             return False
         if cls.parent_element:
             if isinstance(cls.parent_element, SimpleContainer):
@@ -462,8 +526,7 @@ class GroupPanel(bpy.types.Panel):
             if self.parent_element:
                 if self.parent_element.isToggleable():
                     attr = blend_scene_getattr(
-                        context.scene, self.parent_element.settingid,
-                        self.parent_element.uuid_dict, "", self.parent_element.path)
+                        context.scene, self.parent_element.settingid, "", self.parent_element.path)
                     self.layout.enabled = getattr(*attr)
                 if self.layout.enabled:
                     #parent object also needs to be enabled
@@ -481,13 +544,12 @@ class GroupPanel(bpy.types.Panel):
         if self.parent_element and self.parent_element.isToggleable():
             if self.parent_panel.parent_element and self.parent_panel.parent_element.isToggleable():
                 env, attr = blend_scene_getattr(
-                    context.scene, self.parent_panel.parent_element.settingid,
-                    self.parent_panel.parent_element.uuid_dict, "", self.parent_panel.parent_element.path)
+                    context.scene, self.parent_panel.parent_element.settingid, "",
+                    self.parent_panel.parent_element.path)
                 self.layout.enabled = getattr(env, attr)
             env, attr = blend_scene_getattr(
-                context.scene, self.parent_element.settingid,
-                self.parent_element.uuid_dict, "", self.parent_element.path)
-            self.layout.prop(env, attr, text="Enable")
+                context.scene, self.parent_element.settingid, "", self.parent_element.path)
+            self.layout.prop(env, attr, text="")
 
 class GroupWidget(CompoundUIElement):
     def __init__(self, name: str, settingid: str, parent: "UIElement", uuid_dict:dict, schema: dict = {}):
@@ -504,13 +566,10 @@ class GroupWidget(CompoundUIElement):
         _ = panel.layout.row()
 
     def setValue(self, value:bool, context:bpy.types.Context):
-        setattr(*self.getValue(context), bool(value))
+        setattr(*self.get_env_uuid(context), bool(value))
 
-    def getValue(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
-        return blend_scene_getattr(bpy.context.scene, self.settingid, self.uuid_dict, self.type, self.path)
-
-    def setIgnoreExport(self, is_displayed:bool):
-        self.setValue(is_displayed, context=None)
+    def get_env_uuid(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
+        return blend_scene_getattr(bpy.context.scene, self.settingid, self.type, self.path)
 
     def updateElement(self):
         self.adjustSize()
@@ -545,13 +604,15 @@ class GroupWidget(CompoundUIElement):
 
     def getSettings(self) -> dict:
         out_settings = {}
-        if (getattr(*blend_scene_getattr(bpy.context.scene, self.settingid, self.uuid_dict, self.type, self.path)) or
+        if (getattr(*blend_scene_getattr(bpy.context.scene, self.settingid, self.type, self.path)) or
             not self.isToggleable()):
             for e in self.child_elements:
                 if e.name and not e.ignoreSettingExport():
                     settings = e.getSettings()
                     if settings is not None:
                         out_settings[e.name] = settings #TODO DONT CREATE ELEMENT IF NO CHILDREN
+        else:
+            return None
         return out_settings
 
 class OneOfWidget(CompoundUIElement):
@@ -571,7 +632,7 @@ class OneOfWidget(CompoundUIElement):
         if not self.isdrawn():
             return
 
-        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.type, self.path)
         panel_layout = panel.layout.row()
         blend_create_prop(panel_layout, prop_env, attribute, self.title)
 
@@ -584,17 +645,14 @@ class OneOfWidget(CompoundUIElement):
         for child in self.child_elements:
             child.setDisabled(not self.ignore_widget.isChecked())
 
-    def getValue(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
-        return blend_scene_getattr(bpy.context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+    def get_env_uuid(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
+        return blend_scene_getattr(bpy.context.scene, self.settingid, self.type, self.path)
 
     def setDefaultValue(self, context:bpy.types.Context):
         # for oneofs, we reset to the first element
-        first_item = bpy.context.scene.bl_rna.properties[str(self.getValue(context)[1])].enum_items[0].identifier
-        setattr(*self.getValue(context), first_item)
-
-        # make sure to set toggable properties to unchecked
-        if self.isToggleable():
-            self.setIgnoreExport(False)
+        env, attr = self.get_env_uuid(context)
+        first_item = bpy.context.scene.bl_rna.properties[attr].enum_items[0].identifier
+        setattr(env, attr, first_item)
 
     def validateSchema(self):
         if "oneOf" not in self.schema or not self.schema["oneOf"]:
@@ -603,11 +661,11 @@ class OneOfWidget(CompoundUIElement):
     #get settingid of selected child
     def getCurrentUIElement(self) -> str:
         attribute_env, attribute = blend_scene_getattr(
-            bpy.context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+            bpy.context.scene, self.settingid, self.type, self.path)
         return getattr(attribute_env, attribute)
 
-    def setCurrentUIElement(self, element: UIElement):
-        self.dropdown_widget.setCurrentIndex(self.child_element_names.index(element.title))
+    def setCurrentUIElement(self, element_title: str):
+        self.dropdown_widget.setCurrentIndex(self.child_element_names.index(element_title))
 
     def updateElement(self):
         self.adjustSize()
@@ -679,26 +737,49 @@ class OneOfWidget(CompoundUIElement):
         child_by_name[setting_provided].setSettings(settings[setting_provided])
 
         # update the UIElement being displayed
-        self.setCurrentUIElement(child_by_name[setting_provided])
+        self.setCurrentUIElement(child_by_name[setting_provided].title)
         self.onDropdownChanged()
 
-        # make sure to set toggable properties to checked - if the setting was changed, we want it
-        if self.isToggleable():
-            self.setIgnoreExport(True)
-
     def setValue(self, value:Any, context:bpy.types.Context) -> bool:
-        return super().setValue(value, context)
+        # set oneOf to correct value:
+        if 'oneOf' in self.schema:
+            oneof_path = self.path.copy()
+            oneof_path.append("Oneof")
+            attribute_env, attribute = blend_scene_getattr(
+                bpy.context.scene, self.settingid, self.type, oneof_path)
+            #find the correct enum:
+            possible_enums = bpy.context.scene.bl_rna.properties[str(attribute)].enum_items
+            for enum in possible_enums:
+                if value and value in enum.identifier:
+                    setattr(attribute_env, attribute, enum.identifier)
+
+        else:
+            return super().setValue(value, context)
 
 class FileExportType(SimpleContainer):
     def __init__(self, name:str, settingid:str, parent:UIElement, uuid_dict:dict, schema:dict = {}):
+        if "items" in schema:
+            schema = schema["items"]
         super().__init__(name, settingid, parent, uuid_dict,  schema)
+        self.createChildElements()
 
     def draw_on_panel(self, layout:bpy.types.UILayout, context:bpy.types.Context, panel:bpy.types.Panel):
         pass
 
-    def getSettings(self) -> list:
-        # NOTE: the actual CLI schema has an array of export settings
-        return {}
+    def getSettings(self) -> dict:
+        out_settings = {}
+        for e in self.child_elements:
+            if e.name and not e.ignoreSettingExport():
+                settings = e.getSettings()
+                if settings is not None:
+                    if isinstance(settings, dict):
+                        if bool(settings):
+                            out_settings[e.name] = settings
+                        else:
+                            continue
+                    else:
+                        out_settings[e.name] = settings
+        return out_settings
 
     def setDefaultValue(self, context:bpy.types.Context):
         pass

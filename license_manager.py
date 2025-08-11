@@ -45,6 +45,7 @@ class CancelTokenOperator(bpy.types.Operator):
     def execute(self, context:bpy.types.Context) -> set[str]:
         bpy.types.Scene.has_license = True
         bpy.types.Scene.override_token = False
+        bpy.types.Scene.rpde_draw_ui = True
         return {'FINISHED'}
 
 class EnterLicenseOperator(bpy.types.Operator):
@@ -107,7 +108,8 @@ class LicensePanel(bpy.types.Panel):
 
     def draw(self, context:bpy.types.Context):
         if not context.scene.has_license:
-            self.layout.label(text=self.warning_label)
+            if not context.scene.override_token:
+                self.layout.label(text=self.warning_label)
             self.layout.label(text=self.label_str_1)
             self.layout.label(text=self.label_str_2)
             _ = self.layout.row()
@@ -131,7 +133,7 @@ class LicensePanel(bpy.types.Panel):
             panel_layout.operator(CreateTokenOperator.bl_idname, text="Create Authentication Token")
             if context.scene.override_token:
                 panel_layout = self.layout.row()
-                panel_layout.operator(CancelTokenOperator.bl_idname, text="Cancel")
+                panel_layout.operator(CancelTokenOperator.bl_idname, text="Cancel", icon_value=context.scene.icon_cancel.icon_id)
 
 
 class ProcessorLicense:

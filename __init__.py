@@ -39,6 +39,7 @@ import bpy  # type: ignore
 
 files = ["main_widget", "basic_elements", "compound_elements",
      "gui_commons", "about_dialog",  "run_rpde", "license_manager", "magic_actions_operator",
+     "run_operator", "import_operator", "draw_ui", "export_operator",
     ]
 
 dirname = os.path.dirname(__file__)

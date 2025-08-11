@@ -2,6 +2,21 @@
 
 ## Changelog
 
+### Version v1.0.0 August 07, 2025
+* Magic Action release
+    * Added multiple new magic actions
+    * Added preview image and description for each magic action
+* Added File Export using RPDE
+* Added File Import using RPDE
+* Fixed a bug where a node would get deleted if selected during running
+* Fixed an issue that caused blender to freeze on multiple processing steps
+* Updated rpde on version 7.4.1 and Schema to Version 1.4
+* Improved performance of model import
+* General improvements to UI responsiveness and performance 
+* Updated the settings page of the plugin
+* Float values are now displayed with a precision of 3 digits to avoid confusion with some default values
+* Updated icons and UI layout
+
 ### Version v0.2.3 June 30, 2025
 * Added Magic Actions
     * A feature to quickly select and modify commonly used presets.

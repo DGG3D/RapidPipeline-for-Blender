@@ -1,0 +1,44 @@
+{
+    "uid"                : "MA2025052901",
+    "min_engine_version" : [7,4,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 1, "3ds Max" : 1, "blender" : 1, "UnrealEngine" : 2 },
+    "is_import_action"   : false,
+    "name"               : "Cleanup Mesh",
+    "button_name"        : "Cleanup Mesh",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long"  : "Cleans up a model by recomputing mesh normals, removing duplicate vertices and optionally correcting the winding order or merging vertices by distance.",
+    "explanation"        : "Cleans up a model by recomputing mesh normals, removing duplicate vertices and optionally correcting the winding order or merging vertices by distance.",
+    "exposed_options" : [
+        {
+            "name": "Recompute Input Normals",
+            "description" : "Discards the original normals and recomputes them. This can help with flipped, broken or inconvenient input normals.",
+            "path": "3dEdit.meshNormals.recomputeInputNormals"
+        },
+        {
+            "name": "Normal Hard Angle Threshold",
+            "description" : "Hard threshold (degrees) used for normal generation (0 = everything flat, 180 = everything smooth).",
+            "path": "3dEdit.meshNormals.hardAngleThreshold"
+        },
+        {
+            "name": "Normal Computation Method",
+            "description" : "Weighting method for mesh normals. Angle works well for most surfaces, whereas Area works (face-weighted normals) especially well when a model has bevels or fillets.",
+            "path": "3dEdit.meshNormals.computationMethod"
+        },
+        {
+            "name": "Vertex Merging Distance",
+            "description" : "Distance in Percentage relative to the overall models bounding box size for Vertex Merging.",
+            "path": "3dEdit.repair.vertexMerging.mergeDistance.percentage"
+        },
+        {
+            "name": "Prevent cross-mesh vertex merging",
+            "description" : "Decides if vertex merging should run on a per mesh basis. This avoids merging vertices from different separate meshes.",
+            "path": "3dEdit.repair.vertexMerging.perMesh"
+        },
+        {
+            "name": "Fix Winding Order",
+            "description" : "Automatically fix the winding order of parts on import.",
+            "path": "3dEdit.repair.windingOrder",
+            "toggled": false
+        }
+    ]
+}

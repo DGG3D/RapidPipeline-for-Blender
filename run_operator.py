@@ -32,6 +32,7 @@ import shutil
 import traceback
 from abc import abstractmethod
 from sys import platform
+import pathlib
 
 import bpy  # type: ignore
 import bpy.utils.previews  # type: ignore
@@ -105,10 +106,16 @@ class RunOperator(bpy.types.Operator):
     output_folder: str = os.environ["RPDP_PROCESSOR_DCC_DATA"]
     output_filename = ""
 
+    copied_nodes_global = []
+
     def execute(self, context:bpy.types.Context) -> set[str]:
         if context.scene.rpde_running:
             bpy.types.Scene.rpde_running = False
-            self.processFinished()
+            if not context.scene.rpde_export:
+                self.processFinished()
+            else:
+                self.processFinished(False)
+                bpy.types.Scene.rpde_export = False
         else:
             print("execute run")
             self.chooseFolderAndRunPipeline(context)
@@ -120,31 +127,44 @@ class RunOperator(bpy.types.Operator):
         A file with the current settings is exported and validated.
         """
         # build settings from current UI input
-        from .main_widget import root_element
-        current_settings = root_element.getSettings()
-        current_settings["export"] = [
-            {
-                "fileName": "",
-                "textureMapFilePrefix": "",
-                "discard": {},
-                "format": {
-                    "glb": {
-                    "pbrMaterial": {
-                        "textureFormat": {
-                            "default": "png"
+        from .draw_ui import root_element
+        if not context.scene.rpde_export:
+            current_settings = root_element.getSettings()
+            current_settings["export"] = [
+                {
+                    "fileName": "",
+                    "textureMapFilePrefix": "",
+                    "discard": {},
+                    "format": {
+                        "glb": {
+                        "pbrMaterial": {
+                            "textureFormat": {
+                                "default": "png"
+                                }
                             }
                         }
                     }
                 }
-            }
-        ]
+            ]
 
-        # make sure to get the correct filename
-        current_name = current_settings["export"][0].get("fileName", "")
-        if not current_name:
-            self.output_filename = "rpde_file"
+            # make sure to get the correct filename
+            current_name = current_settings["export"][0].get("fileName", "")
+            if not current_name:
+                self.output_filename = "rpde_file"
+            else:
+                self.output_filename = current_name
+
         else:
-            self.output_filename = current_name
+            current_settings = root_element.getSettings()
+            from .export_operator import global_export_path
+            current_settings["export"]["fileName"] = pathlib.Path(global_export_path).stem
+
+            #NOTE this is needed since export is a list in the schema
+            export_settings = current_settings["export"]
+            current_settings["export"] = []
+            current_settings["export"].append(export_settings)
+
+            self.output_filename = "rpde_file"
 
         json_path = self.getOutputJSonPath()
         if not JSonUtils.saveJSON(current_settings, json_path):
@@ -175,7 +195,11 @@ class RunOperator(bpy.types.Operator):
             return
 
         output_json_path = self.getOutputJSonPath()
-        RunPipeline.runPipeline(input_file, output_json_path, self.output_folder, copied_nodes)
+        if not context.scene.rpde_export:
+            RunPipeline.runPipeline(input_file, output_json_path, self.output_folder, copied_nodes)
+        else:
+            from .export_operator import global_export_path
+            RunPipeline.runPipeline(input_file, output_json_path, global_export_path, copied_nodes)
 
 
     def getOutputJSonPath(self) -> str:
@@ -196,6 +220,7 @@ class RunOperator(bpy.types.Operator):
         """
         Exports model to be run by the RapidPipeline 3D Processor Engine
         """
+        global copied_nodes_global
         export_path = os.path.dirname(file_path)
         os.makedirs(export_path, exist_ok=True)
 
@@ -210,33 +235,38 @@ class RunOperator(bpy.types.Operator):
                         o.select_set(True)
             export_selection = bpy.context.selected_objects
 
-            #NOTE We need to copy the object since we apply modifiers before the export step
-            # duplicate nodes (duplicated nodes are now selected):
-            bpy.ops.object.duplicate()
-            copied_nodes = bpy.context.selected_objects
-            bpy.ops.object.select_all(action='DESELECT')
+            if not bpy.context.scene.rpde_export:
+                #NOTE We need to copy the object since we apply modifiers before the export step
+                # duplicate nodes (duplicated nodes are now selected):
+                bpy.ops.object.duplicate()
+                copied_nodes = bpy.context.selected_objects
+                bpy.ops.object.select_all(action='DESELECT')
 
-            for idx, o in enumerate(copied_nodes):
-                # When only child is selected the duplicated child will then stay a child of the existing parent.
-                if o.parent not in copied_nodes:
-                    parented_wm = o.matrix_world.copy()
-                    o.parent = None
-                    o.matrix_world = parented_wm
+                for idx, o in enumerate(copied_nodes):
+                    # When only child is selected the duplicated child will then stay a child of the existing parent.
+                    if o.parent not in copied_nodes:
+                        parented_wm = o.matrix_world.copy()
+                        o.parent = None
+                        o.matrix_world = parented_wm
 
-                o.name = export_selection[idx].name + "_processed"
+                    o.name = export_selection[idx].name + "_processed"
 
-                if o.type == 'MESH':
-                    for _, m in enumerate(o.modifiers):
-                        try:
-                            bpy.ops.object.modifier_apply(modifier=m.name)
-                        except Exception:
-                            print("Error in applying modifiers.")
+                    if o.type == 'MESH':
+                        for _, m in enumerate(o.modifiers):
+                            try:
+                                bpy.ops.object.modifier_apply(modifier=m.name)
+                            except Exception:
+                                print("Error in applying modifiers.")
 
-            for original_node in export_selection:
-                original_node.select_set(False)
-                #dont hide camera and lights from the original scene
-                if original_node.type not in {'LIGHT', 'CAMERA'}:
-                    original_node.hide_set(True)
+                for original_node in export_selection:
+                    original_node.select_set(False)
+                    #dont hide camera and lights from the original scene
+                    if original_node.type not in {'LIGHT', 'CAMERA'}:
+                        original_node.hide_set(True)
+
+                copied_nodes_global = copied_nodes.copy()
+            else:
+                copied_nodes = export_selection
 
             # select all copied nodes and export
             for object in copied_nodes:
@@ -271,10 +301,17 @@ class RunOperator(bpy.types.Operator):
             exported_objects_collections = {}    # dict(node_name : collection)
             selection = bpy.context.selected_objects
             bpy.ops.object.select_all(action='DESELECT')
-            for o in selection:
-                exported_objects_collections[o.name] = (o.users_collection)    # retaining collections
-                o.select_set(True)
+
+            try:
+                for o in copied_nodes_global:
+                    exported_objects_collections[o.name] = (o.users_collection)    # retaining collections
+                    o.select_set(True)
                 bpy.ops.object.delete()
+
+            except NameError:   # Case Import only case / no copied nodes defined
+                pass
+            except Exception:
+                print("Warning: Could not find and delete copied nodes.")
 
             #get current scene
             scene = bpy.context.scene
@@ -303,7 +340,7 @@ class RunOperator(bpy.types.Operator):
 
             # import glb
             try:
-                bpy.ops.import_scene.gltf(filepath=file_path)
+                bpy.ops.import_scene.gltf(filepath=file_path, merge_vertices=True)
             except Exception:
                 print(f"Could not import glb file: {file_path}")
                 print(traceback.format_exc())
@@ -339,11 +376,11 @@ class RunOperator(bpy.types.Operator):
                         break
 
                 if scene_graph_flatteing:
-                    flattening_collection = create_new_collection("_flattened", link_to_scene=False)
+                    flattening_collection = create_new_collection("_multi-selection-flattened", link_to_scene=False)
                     collection_in_collection(processing_collection, flattening_collection)
                     unhide_collection(vlayer, flattening_collection)
                     for node in selection:
-                        # move nodes into _flattened
+                        # move nodes into _multi-selection-flattened
                         node_in_collection(node, flattening_collection, scene_collection)
 
                 # case for processing without flattening
@@ -361,6 +398,8 @@ class RunOperator(bpy.types.Operator):
                                         node_in_collection(
                                             objects_in_scene[node_name], collection_copy, scene_collection)
                         except Exception:
+                            traceback.print_stack()
+                            traceback.print_exc()
                             print("Warning: original node names or collections could not be found.")
                             print("Placing node in 'Scene Collection' instead.")
 
@@ -402,8 +441,8 @@ class RunOperator(bpy.types.Operator):
         unhide_collection(vlayer, collection_copy)
         return collection_copy
 
-    def processFinished(self):
-        from .main_widget import root_element
+    def processFinished(self, import_model = True):
+        from .draw_ui import root_element
         current_settings = root_element.getSettings()
         current_settings["export"] = [
             {
@@ -430,7 +469,16 @@ class RunOperator(bpy.types.Operator):
 
         input_file = self.getInputFilePath()
 
-        self.importModel(input_file)
+        if import_model:
+            self.importModel(input_file)
+
+        else:
+            from .export_operator import global_export_ext, global_export_path
+            optimized_file = self.getOptimizedFilePath(global_export_path, global_export_ext)
+            # RPDE results are placed in a certain subfolder, so we copy it over to the location
+            # move file and textures to specific output location
+            shutil.copytree(os.path.dirname(optimized_file), os.path.dirname(global_export_path), dirs_exist_ok=True)
+            shutil.rmtree(global_export_path)
 
         # removes temporary input tree
         shutil.rmtree(self.getExecutionInputFolder())
@@ -441,8 +489,29 @@ class RunOperator(bpy.types.Operator):
 
         print("Process Successful")
 
+    def getOptimizedFilePath(self, output_folder:str, type_override:str) -> str:
+        """
+        This function should somehow use self.getOptimizedFolder().
+        E.g.: os.path.join(self.getOptimizedFolder(), "0_fbx", "scene_file.fbx")
+        The format selection is left up to each DCC implementation.
+        """
+        type_override = type_override.lower()
+        file_type = type_override
+        return os.path.join(output_folder, f"0_{file_type}", f"scene_file.{file_type}")
+
     def getOutputFilePath(self) -> str:
         return os.path.join(self.getExecutionOutputFolder(), f"{self.output_filename}.{self.extension}")
 
     def getInputFilePath(self) -> str:
         return os.path.join(self.getExecutionInputFolder(), f"{self.output_filename}.{self.import_extension}")
+
+def register():
+    reg()
+
+def unregister():
+    unreg()
+
+clss = (RunOperator,
+        )
+
+reg, unreg = bpy.utils.register_classes_factory(clss)

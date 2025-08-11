@@ -57,7 +57,7 @@ class StringProperty(UIElement):
     def draw_on_panel(self, layout:bpy.types.UILayout, context:bpy.types.Context, panel:bpy.types.Panel):
         if not self.isdrawn():
             return
-        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.type, self.path)
         panel_layout = panel.layout.row()
         blend_create_prop(panel_layout, prop_env, attribute, self.title)
 #
@@ -79,7 +79,7 @@ class BooleanProperty(UIElement):
         if not self.isdrawn():
             return
 
-        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.type, self.path)
         panel_layout = panel.layout.row()
         blend_create_prop(panel_layout, prop_env, attribute, self.title)
 
@@ -100,7 +100,7 @@ class IntegerProperty(UIElement):
     def draw_on_panel(self, layout:bpy.types.UILayout, context:bpy.types.Context, panel:bpy.types.Panel):
         if not self.isdrawn():
             return
-        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.type, self.path)
         panel_layout = panel.layout.row()
         blend_create_prop(panel_layout, prop_env, attribute, self.title)
 
@@ -128,7 +128,7 @@ class FloatProperty(UIElement):
         if not self.isdrawn():
             return
 
-        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.type, self.path)
         panel_layout = panel.layout.row()
         blend_create_prop(panel_layout, prop_env, attribute, self.title, slider=self.has_slider)
 
@@ -153,7 +153,7 @@ class PercentageProperty(FloatProperty):  # noqa: F811
         if not self.isdrawn():
             return
 
-        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.type, self.path)
         panel_layout = panel.layout.row()
         blend_create_prop(panel_layout, prop_env, attribute, self.title)
 
@@ -166,17 +166,18 @@ class EnumProperty(UIElement):
         if not self.isdrawn():
             return
 
-        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.type, self.path)
         panel_layout = panel.layout.row()
         blend_create_prop(panel_layout, prop_env, attribute, self.title)
 
-    def getValue(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
-        return blend_scene_getattr(bpy.context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+    def get_env_uuid(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
+        return blend_scene_getattr(bpy.context.scene, self.settingid, self.type, self.path)
 
     def setDefaultValue(self, context:bpy.types.Context):
         # for enums, we reset to the first element
-        first_item = bpy.context.scene.bl_rna.properties[str(self.getValue(context)[1])].enum_items[0].identifier
-        setattr(*self.getValue(context), first_item)
+        env, attr = self.get_env_uuid(context)
+        first_item = bpy.context.scene.bl_rna.properties[attr].enum_items[0].identifier
+        setattr(env, attr, first_item)
 
 
 class ColorPropertyGroup(bpy.types.PropertyGroup):
@@ -194,7 +195,7 @@ class ColorPicker(UIElement):
         if not self.isdrawn():
             return
 
-        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.uuid_dict, self.type, self.path)
+        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.type, self.path)
         panel_layout = panel.layout.row()
         blend_create_prop(panel_layout, prop_env, attribute, self.title)
 
