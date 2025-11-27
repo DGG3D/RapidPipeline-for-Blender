@@ -1,0 +1,37 @@
+{
+    "uid"         : "MA2025052913",
+    "min_engine_version" : [7,4,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 10, "3ds Max" : 10, "blender" : 10, "UnrealEngine" : 10 },
+    "name"        : "Generate UV Atlas",
+    "button_name" : "Generate UV Atlas",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "Creates one or more UV atlases depending on given mode (single, separateMaterials or by separateAlpha). Materials are kept retaining any Material Colors and Names. UVs are non-overlapping and global. Warning: This overrides existing UV sets and might therefore lead to issues with existing Texture Sets.",
+    "explanation" : "Creates one or more UV atlases depending on given mode (single, separateMaterials or by separateAlpha). Materials are kept retaining any Material Colors and Names. UVs are non-overlapping and global.",
+    "exposed_options" : [
+        {
+            "name": "Atlas Mode",
+            "description" : "Mode used to assign atlases. Default is separateMaterials, separateAlpha creates UV atlases by opacity (opaque vs transparent materials). Single will create one atlas for the whole mesh.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.atlasMode"
+        },
+        {
+            "name": "Multiple Atlas Factor",
+            "description" : "Divide each atlas into new atlases. This leads to duplicated atlas count which paired with a low texture resolution (2k) can be a good alternative to fewer atlases with higher texture resolution (4k).",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.atlasFactor"
+        },
+        {
+            "name": "Segmentation Cut Angle",
+            "description" : "Threshold in degrees creating UV seams when the angle between triangles is higher than specified value. Increasing degrees creates more cuts, smaller charts, and better UV space utilization.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.segmentationCutAngle"
+        },
+        {
+            "name": "Segmentation Chart Angle",
+            "description" : "Threshold in degrees for curvature of 3D charts. Creates UV seams based on surface curvature, which is determined by averaging surface normals. Lower values create more cuts, smaller charts.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.segmentationChartAngle"
+        },
+        {
+            "name": "Maximum Angle Error",
+            "description" : "Maximum angle difference in degrees between UV and 3D space beyond which a chart is split and re-unwrapped. This can be used to reduce UV distortion, using a smaller angle introduces more splits.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.maxAngleError"
+        }
+]
+}

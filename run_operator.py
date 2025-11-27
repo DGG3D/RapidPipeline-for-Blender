@@ -28,16 +28,18 @@ process) for further information.
 """
 
 import os
+import pathlib
 import shutil
 import traceback
 from abc import abstractmethod
 from sys import platform
-import pathlib
+from typing import Any
 
 import bpy  # type: ignore
 import bpy.utils.previews  # type: ignore
 
 from .run_rpde import RunPipeline
+from .ui_utils import deselect_all, fix_animation, select_children, set_object_mode
 
 # defines user appdata folder for the plugin
 base_dcc_data_folder = os.path.join(
@@ -47,6 +49,30 @@ os.environ["RPDP_PROCESSOR_DCC_DATA"] = os.path.join(base_dcc_data_folder, "Rapi
 from .gui_commons import UserDialog
 from .json_utils import JSonUtils
 
+
+def get_export_settings(file_name:str = "") -> list[dict]:
+    return [
+            {
+                "fileName": file_name,
+                "textureMapFilePrefix": "",
+                "discard": {},
+                "format": {
+                    "glb": {
+                    "pbrMaterial": {
+                        "textureFormat": {
+                            "default": "png"
+                            }
+                        }
+                    }
+                }
+            }
+        ]
+
+def get_viewlayer() -> Any:
+    if "ViewLayer" in bpy.context.scene.view_layers:
+        return bpy.context.scene.view_layers['ViewLayer']
+    else:
+        return bpy.context.scene.view_layers[0]
 
 def node_in_collection(
         node:bpy.types.Node, collection:bpy.types.Collection, scene_collection:bpy.types.Collection = None):
@@ -69,13 +95,17 @@ def create_new_collection(collection_name:str, link_to_scene:bool = True) -> bpy
         collection = bpy.data.collections[collection_name]
     return collection
 
-def collection_in_collection(collection_outer:bpy.types.Collection, collection_inner:bpy.types.Collection):
+def link_collection(collection_outer:bpy.types.Collection, collection_inner:bpy.types.Collection):
     if collection_inner.name not in bpy.data.collections[collection_outer.name].children:
         bpy.data.collections[collection_outer.name].children.link(collection_inner)
 
+def unlink_collection(collection_outer:bpy.types.Collection, collection_inner:bpy.types.Collection):
+    if collection_inner.name in bpy.data.collections[collection_outer.name].children:
+        bpy.data.collections[collection_outer.name].children.unlink(collection_inner)
+
 # unhides the given collection and activates it in view Layer
 # NOTE carefull, this also changes the selection in context.selected_objects
-def unhide_collection(vlayer, collection):
+def unhide_collection(vlayer:Any, collection:bpy.types.Collection):
     collection_viewport = search_collection(
         vlayer.layer_collection, collection.name)
     collection_viewport.hide_viewport = False
@@ -98,7 +128,7 @@ class RunOperator(bpy.types.Operator):
     bl_label = "run"
     bl_options = {'REGISTER', 'UNDO'}
 
-    output_cmd: bpy.props.StringProperty() # type: ignore
+    output_cmd: bpy.props.StringProperty(options={'HIDDEN'}) # type: ignore
 
     # define file paths
     extension = os.environ.get("RPDP_PROCESSOR_DCC_OUTPUT", "glb")
@@ -130,22 +160,7 @@ class RunOperator(bpy.types.Operator):
         from .draw_ui import root_element
         if not context.scene.rpde_export:
             current_settings = root_element.getSettings()
-            current_settings["export"] = [
-                {
-                    "fileName": "",
-                    "textureMapFilePrefix": "",
-                    "discard": {},
-                    "format": {
-                        "glb": {
-                        "pbrMaterial": {
-                            "textureFormat": {
-                                "default": "png"
-                                }
-                            }
-                        }
-                    }
-                }
-            ]
+            current_settings["export"] = get_export_settings()
 
             # make sure to get the correct filename
             current_name = current_settings["export"][0].get("fileName", "")
@@ -173,15 +188,8 @@ class RunOperator(bpy.types.Operator):
         print(f"Exported Settings: {json_path}")
 
         # set to object mode
-        scene = bpy.context.scene
         if bpy.context.view_layer.objects.active:
-            for obj in scene.objects:
-                if obj.type == 'MESH' and not obj.hide_get():
-                    try:
-                        bpy.context.view_layer.objects.active = obj
-                        bpy.ops.object.mode_set(mode='OBJECT')
-                    except Exception:
-                        print(f"Warning: Could not find node: {obj} to select in object mode")
+            set_object_mode()
 
         # exports model to predefined file location
         input_file = self.getProcessorInputFile()
@@ -197,6 +205,13 @@ class RunOperator(bpy.types.Operator):
         output_json_path = self.getOutputJSonPath()
         if not context.scene.rpde_export:
             RunPipeline.runPipeline(input_file, output_json_path, self.output_folder, copied_nodes)
+            # make copied nodes not selectable
+            try:
+                for node in copied_nodes:
+                    node.hide_select = True
+            except Exception:  # noqa: S110
+                pass
+
         else:
             from .export_operator import global_export_path
             RunPipeline.runPipeline(input_file, output_json_path, global_export_path, copied_nodes)
@@ -228,10 +243,13 @@ class RunOperator(bpy.types.Operator):
         with bpy.context.temp_override(window = window):
             export_selection = bpy.context.selected_objects
 
+            # select children:
+            select_children()
+
             if (len(export_selection) == 0):    # No objects selected -> select all objects
                 view_layer = bpy.context.view_layer
                 for o in list(bpy.data.objects):
-                    if o.name in view_layer.objects and not o.hide_get() :
+                    if o.name in view_layer.objects and not o.hide_get():
                         o.select_set(True)
             export_selection = bpy.context.selected_objects
 
@@ -240,7 +258,7 @@ class RunOperator(bpy.types.Operator):
                 # duplicate nodes (duplicated nodes are now selected):
                 bpy.ops.object.duplicate()
                 copied_nodes = bpy.context.selected_objects
-                bpy.ops.object.select_all(action='DESELECT')
+                deselect_all()
 
                 for idx, o in enumerate(copied_nodes):
                     # When only child is selected the duplicated child will then stay a child of the existing parent.
@@ -258,8 +276,8 @@ class RunOperator(bpy.types.Operator):
                             except Exception:
                                 print("Error in applying modifiers.")
 
+                deselect_all()
                 for original_node in export_selection:
-                    original_node.select_set(False)
                     #dont hide camera and lights from the original scene
                     if original_node.type not in {'LIGHT', 'CAMERA'}:
                         original_node.hide_set(True)
@@ -272,10 +290,14 @@ class RunOperator(bpy.types.Operator):
             for object in copied_nodes:
                 object.select_set(True)
             try:
+                #NOTE we should not need to use "use_visible" here but it seems like blender is exporting more
+                # than just selected nodes even though "use_selection" is true
                 bpy.ops.export_scene.gltf(
-                    #NOTE we should not need to use "use_visible" here but it seems like blender is exporting more
-                    # than just selected nodes even though "use_selection" is true
-                    export_format='GLB', use_active_scene=True, use_selection=True, use_visible=True, filepath=file_path)
+                    export_format='GLB',
+                    use_active_scene=True,
+                    use_selection=True,
+                    use_visible=True,
+                    filepath=file_path)
             except Exception:
                 print(f"Could not export glb file: {file_path}")
                 print(traceback.format_exc())
@@ -300,10 +322,11 @@ class RunOperator(bpy.types.Operator):
         with bpy.context.temp_override(window = window):
             exported_objects_collections = {}    # dict(node_name : collection)
             selection = bpy.context.selected_objects
-            bpy.ops.object.select_all(action='DESELECT')
+            deselect_all()
 
             try:
                 for o in copied_nodes_global:
+                    o.hide_select = False
                     exported_objects_collections[o.name] = (o.users_collection)    # retaining collections
                     o.select_set(True)
                 bpy.ops.object.delete()
@@ -321,9 +344,10 @@ class RunOperator(bpy.types.Operator):
             # if all nodes of a collection are hidden, unhide nodes and hide collection instead
             used_collections = [x for xs in exported_objects_collections.values()
                                 for x in xs if x is not scene_collection]
+
+            vlayer = get_viewlayer()
             try:
                 for collection in used_collections:
-                    vlayer = bpy.context.scene.view_layers['ViewLayer']
                     all_nodes_hidden = True
                     for node in collection.all_objects:
                         if not node.hide_get() and "_processed" not in node.name:
@@ -338,6 +362,10 @@ class RunOperator(bpy.types.Operator):
             except Exception:
                 print("Warning: could not hide collection")
 
+
+            # make sure scene collection is selected before import
+            vlayer.active_layer_collection = vlayer.layer_collection
+
             # import glb
             try:
                 bpy.ops.import_scene.gltf(filepath=file_path, merge_vertices=True)
@@ -345,20 +373,23 @@ class RunOperator(bpy.types.Operator):
                 print(f"Could not import glb file: {file_path}")
                 print(traceback.format_exc())
 
-            vlayer = bpy.context.scene.view_layers['ViewLayer']
+            vlayer = get_viewlayer()
+
+            fix_animation(bpy.context.selected_objects)
 
             # case for CAD import
             if not exported_objects_collections:
-                cad_collection = create_new_collection("_CAD_import")
+                cad_collection = create_new_collection("_import")
                 unhide_collection(vlayer, cad_collection)
 
-                cad_file_name = bpy.context.scene.rpde_cmd.split("-i**")[1].split("**")[0]
+                from .run_rpde import cmd_command
+                cad_file_name = cmd_command[4]
                 cad_file_name = os.path.basename(cad_file_name)
                 cad_file_collection = bpy.data.collections.new(cad_file_name)
-                collection_in_collection(cad_collection, cad_file_collection)
+                link_collection(cad_collection, cad_file_collection)
 
                 # move imported cad model into cad_file_collection
-                for node in objects_in_scene:
+                for node in bpy.context.selected_objects:
                     try:
                         scene_collection.objects.unlink(node)
                         cad_file_collection.objects.link(node)
@@ -377,14 +408,21 @@ class RunOperator(bpy.types.Operator):
 
                 if scene_graph_flatteing:
                     flattening_collection = create_new_collection("_multi-selection-flattened", link_to_scene=False)
-                    collection_in_collection(processing_collection, flattening_collection)
+                    # if only one collection was used in flattening than we keep that structure
+                    is_collections_flattened = len(set(exported_objects_collections.values())) > 1
+
+                    if not is_collections_flattened:
+                        collection_copy = self.moveCollectionIntoProcessed(
+                            [x for x in exported_objects_collections.values()][0][0],
+                            processing_collection, parent, True)
+                        link_collection(collection_copy, flattening_collection)
+                    else:
+                        link_collection(processing_collection, flattening_collection)
                     unhide_collection(vlayer, flattening_collection)
-                    for node in selection:
-                        # move nodes into _multi-selection-flattened
+                    for node in selection:      # move nodes into _multi-selection-flattened
                         node_in_collection(node, flattening_collection, scene_collection)
 
-                # case for processing without flattening
-                if not scene_graph_flatteing:
+                else:
                     # Move nodes back into collection
                     collection_set = set([x for x in exported_objects_collections.values()])
                     for collections in collection_set:
@@ -416,50 +454,35 @@ class RunOperator(bpy.types.Operator):
         scene = bpy.context.scene
         scene_collection = scene.collection
         coll_processed_name = collection.name + "_processed"
-        vlayer = bpy.context.scene.view_layers['ViewLayer']
+        vlayer = get_viewlayer()
 
         if collection == scene_collection:
             unhide_collection(vlayer, processing_collection)
             return processing_collection
         if initial_call or not search_collection(vlayer.layer_collection, coll_processed_name):
-            collection_copy = bpy.data.collections.new(coll_processed_name)
+            collection_copy = create_new_collection(coll_processed_name, False)
         else:
             unhide_collection(vlayer, bpy.data.collections[(coll_processed_name)])
             return bpy.data.collections[(coll_processed_name)] # collection was already moved
 
         # If collection on lowest level, move "<collection>_processed" into "_processed"
         if collection in list(scene_collection.children):
-            collection_in_collection(processing_collection, collection_copy)
+            link_collection(processing_collection, collection_copy)
         else:
             if parent[collection]:  # get all parent collections...
                 parent_collection = self.moveCollectionIntoProcessed(
                     parent[collection], processing_collection, parent, False)
                 try:
-                    collection_in_collection(parent_collection, collection_copy)
+                    link_collection(parent_collection, collection_copy)
                 except Exception:
                     print(f"{collection_copy.name} already in {parent_collection.name}")
         unhide_collection(vlayer, collection_copy)
         return collection_copy
 
-    def processFinished(self, import_model = True):
+    def processFinished(self, import_model:bool = True):
         from .draw_ui import root_element
         current_settings = root_element.getSettings()
-        current_settings["export"] = [
-            {
-                "fileName": "",
-                "textureMapFilePrefix": "",
-                "discard": {},
-                "format": {
-                    "glb": {
-                    "pbrMaterial": {
-                        "textureFormat": {
-                            "default": "png"
-                            }
-                        }
-                    }
-                }
-            }
-        ]
+        current_settings["export"] = get_export_settings()
 
         current_name = current_settings["export"][0].get("fileName", "")
         if not current_name:
@@ -486,7 +509,7 @@ class RunOperator(bpy.types.Operator):
         # finished successfully, display a msg to the user
         confirm_label = "The RapidPipeline 3D Processor finished running successfully."
         UserDialog.okInfo(self, "Process Successful", confirm_label)
-
+        self.report({'INFO'}, "Process Successful.")
         print("Process Successful")
 
     def getOptimizedFilePath(self, output_folder:str, type_override:str) -> str:

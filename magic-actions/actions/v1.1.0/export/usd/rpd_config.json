@@ -1,0 +1,47 @@
+{
+  "export": [
+    {
+      "fileName": "",
+      "preserveTextureFilenames": false,
+      "textureMapFilePrefix": "",
+      "reencodeTextures": "auto",
+      "discard": {
+        "unusedUVs": false,
+        "emptyNodes": false
+      },
+      "format": {
+        "usd": {
+          "usdPreviewSurface": {
+            "maxTextureResolution": {
+              "default": 4096
+            },
+            "textureFormat": {
+              "default": "auto",
+              "normal": "auto"
+            },
+            "textureCompression": {
+              "jpeg": {
+                "quality": 90,
+                "qualityNormals": 95
+              },
+              "webp": {
+                "quality": 95,
+                "qualityNormals": 95
+              },
+              "ktx": {
+                "compressionSpeed": 2,
+                "quality": 128,
+                "uastcQuality": "default",
+                "mipmapCount": 2
+              }
+            }
+          },
+          "usdProfile": "arkit",
+          "usdUnits": "original",
+          "forceDoubleSidedMeshes": false,
+          "excludeTangents": true
+        }
+      }
+    }
+  ]
+}

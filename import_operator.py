@@ -33,20 +33,17 @@ from typing import Any
 
 import bpy
 import bpy_extras
+from bpy.types import Context, Event, Operator
 
 from .json_utils import JSonUtils
-from .magic_actions_operator import (
-    MagicActionOperator,
-    get_import_actions,
-    get_version,
-)
-from .run_operator import RunPipeline
+from .magic_actions_operator import MagicAction, MagicActionOperator, get_import_actions, get_version
+from .run_operator import RunPipeline, get_export_settings
 from .scene_utils import blend_create_prop, blend_scene_getattr
 
 output_path = os.path.join(os.environ["RPDP_PROCESSOR_DCC_DATA"], "import")
 
 #https://blender.stackexchange.com/questions/74052/wrap-text-within-a-panel
-def prettyPrint(main_layout:Any ,text:str, context:bpy.types.Context):
+def prettyPrint(main_layout:Any ,text:str, context:Context):
     panel_width = context.region.width
 
     # Calculate the maximum width of the label
@@ -63,20 +60,25 @@ def prettyPrint(main_layout:Any ,text:str, context:bpy.types.Context):
             main_layout = main_layout.column()
             main_layout.label(text=chunk)
 
-class ImportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
+class ImportFileOperator(Operator, bpy_extras.io_utils.ImportHelper):
     bl_idname = "processor.file_import_operator"
     bl_description = "Import 3D Model"
     bl_label = "Import File"
 
+    dirname = os.path.dirname(__file__)
+    cad_import = os.path.isfile(os.path.join(dirname, "cad_import.py"))
 
-    def invoke(self, context, event):
+    import_actions:list[MagicAction] = get_import_actions()
+    for action in import_actions:
+        if not cad_import and "Import CAD" in action.action_name:
+            import_actions.remove(action)
+
+    def invoke(self, context:Context, event:Event) -> set:
         # select first import action
-        from .magic_actions_operator import MagicAction, get_import_actions
-        import_actions:list[MagicAction] = get_import_actions()
-        bpy.ops.processor.magic_action_button(magic_action_str=import_actions[0].action_name)
+        bpy.ops.processor.magic_action_button(magic_action_str=self.import_actions[0].action_name)
         return super().invoke(context, event)
 
-    def cancel(self, context):
+    def cancel(self, context:Context):
         # select first magic action
         from .magic_actions_operator import MagicAction, get_magic_actions
         magic_actions_sorted:list[MagicAction] = get_magic_actions()
@@ -84,23 +86,24 @@ class ImportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         bpy.ops.processor.magic_action_button(magic_action_str=first_magic_action)
         return None
 
-    def draw(self, context):
+    def draw(self, context:Context):
         layout = self.layout
-        selected_magic_action_str = context.scene.magic_action_property.selected_magic_action
+        selected_magic_action_str = context.scene.rpde_selected_action
         selection = "Choose a Magic Action"
 
         from .main_widget import preview_collections
         pcoll = preview_collections["main"]
-        magic_action_placeholder = pcoll["Magic_action_placeholder"]
+        magic_action_placeholder = pcoll.get("Magic_action_placeholder", None)
         version = get_version()
         button_layout = layout
         main_magic_layout = layout
 
-        for magic_action in get_import_actions():
+        for magic_action in self.import_actions:
             op:MagicActionOperator = button_layout.operator(
                 MagicActionOperator.bl_idname,
                 text=magic_action.action_name,
-                icon_value=getattr(context.scene, f"magic_action_{version}_{os.path.basename(magic_action.path)}").icon_id,
+                icon_value=getattr(context.scene,
+                                   f"magic_action_{version}_{os.path.basename(magic_action.path)}").icon_id,
                 depress=selected_magic_action_str == magic_action.action_name)
             action_name = magic_action.action_name
             op.magic_action_str = action_name
@@ -108,7 +111,7 @@ class ImportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         if selected_magic_action_str:
             selection = selected_magic_action_str
         from .magic_actions_operator import MagicAction
-        selected_magic_action:MagicAction = next((action for action in context.scene.magic_action_property.magic_actions
+        selected_magic_action:MagicAction = next((action for action in get_import_actions()
                                                   if action.action_name == selection
                                                   and action.action_version == get_version()), None)
 
@@ -144,9 +147,10 @@ class ImportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                     left_col.alignment  = 'RIGHT'
                     right_col = sub.column(align=True)
                     attribute_env, attribute = blend_scene_getattr(
-                        context.scene, "magic_action", path=option.option_path)
+                        context.scene, path=option.option_path)
 
-                    option_name = option.option_name if option.option_name else option.option.get_option_ui_element().title
+                    option_name = option.option_name if (
+                        option.option_name) else option.option.get_option_ui_element().title
                     left_col.label(text=option_name)
                     blend_create_prop(right_col, attribute_env, attribute, name="")
                     sub = box_layout.row()
@@ -157,7 +161,7 @@ class ImportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
             warning_msg = "Please choose an action above"
             magic_layout.label(text=warning_msg, icon='ERROR')
 
-    def execute(self, context:bpy.types.Context) -> set:
+    def execute(self, context:Context) -> set:
 
         if not os.path.isfile(self.filepath):
             self.report({'WARNING'}, "No file selected...")
@@ -169,22 +173,7 @@ class ImportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
         from .draw_ui import root_element
         current_settings = root_element.getSettings()
 
-        current_settings["export"] = [
-            {
-                "fileName": "rpde_file",
-                "textureMapFilePrefix": "",
-                "discard": {},
-                "format": {
-                    "glb": {
-                    "pbrMaterial": {
-                        "textureFormat": {
-                            "default": "png"
-                            }
-                        }
-                    }
-                }
-            }
-        ]
+        current_settings["export"] = get_export_settings("rpde_file")
 
         # make sure to get the correct filename
         current_name = current_settings["export"][0].get("fileName", "")
@@ -225,11 +214,6 @@ def menu_func_import(self:Any, context:bpy.types.Context):
 clss = (
     ImportFileOperator,
 )
-
-def load_import_props(magic_action_path):
-    for import_action in magic_action_path:
-        import_action_meta = os.path.join(magic_action_path, import_action)
-        JSonUtils.loadJSON(import_action_meta)
 
 def register():
     reg()

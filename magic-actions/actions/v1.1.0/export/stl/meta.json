@@ -1,0 +1,12 @@
+{
+    "uid"                : "MA2025052900",
+    "min_engine_version" : [7,1,0],
+    "ui_prio_hints"      : { "Substance" : -1, "Maya" : 0, "3ds Max" : 0, "blender" : 0, "UnrealEngine" : 0 },
+    "name"               : "Export stl",
+    "button_name"        : "Export stl",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long"  : "",
+    "explanation"        : "Exports a model to the stl format.",
+    "exposed_options" : [
+    ]
+}

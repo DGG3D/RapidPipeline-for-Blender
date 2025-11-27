@@ -1,0 +1,63 @@
+{
+    "uid"         : "MA2025052912",
+    "min_engine_version" : [7,4,1],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 6, "3ds Max" : 6, "blender" : 6, "UnrealEngine" : 6 },
+    "name"        : "Decimate and Bake Atlas",
+    "button_name" : "Decimate and Bake Atlas",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "Decimates to a lower face count, creates a UV atlas and bakes material properties such as color, normals, and occlusion into textures. This improves performance for real-time assets in games or XR.",
+    "explanation" : "Decimates to a lower face count, creates a UV atlas and bakes material properties such as color, normals, and occlusion into textures. This improves performance for real-time assets in games or XR.",
+    "exposed_options" : [
+        {
+            "name": "Texture Baking Resolution",
+            "description" : "Resolution for baking textures. Default is 4096x4096 pixels. Values are always rounded up to the next higher powers-of-two resolution. <br/>Non-square dimensions may be generated, when beneficial, if 'Texture Resolution Auto Scaling' is enabled.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.bakingResolution.default"
+        },
+        {
+            "name": "Bake Occlusion Map",
+            "description" : "Bakes an ambient occlusion texture. <br/>If 'Preserve Tiling' is enabled, then a 2nd UV is generated using an 'atlas' layout and the occlusion is baked into it. <br/>If 'Preserve Tiling' is disabled, the first UV is re-generated using an 'atlas' layout and the occlusion is baked into it.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.aoBaker",
+            "toggled": false
+        },
+        {
+            "name": "Texture Resolution Auto Scaling",
+            "description" : "When enabled the value for 'Texture Baking Resolution' is used for the largest atlas in terms of occupied 3D surface. Materials on smaller meshes will use smaller power of 2 resolutions, according to their size in 3D space. <br/>When disabled, all atlases will use the same texture resolution, as set by the 'Texture Baking Resolution' parameter.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.texMapAutoScaling"
+        },
+        {
+            "name": "Face Target",
+            "description" : "The target amount of faces (triangles), default is 150,000 triangles. RapidPipeline will attempt to get as close as possible to the chosen value, though sometimes a mesh may require a slightly different final triangle count to preserve surface continuity.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.target.faces.value"
+        },
+        {
+            "name": "Deviation Percentage",
+            "description" : "Target percentage of deviation relative to the original mesh. Smaller values tend to cause higher triangle counts. <br/>Works in conjunction with face target as a cap. Depending on the deviation, the final face count can be lower or equal to the face count. <br/>We recommend a percentage of 0.05% or less for complex highly detailed 3D assets, to achieve a reasonably small deviation. For a medium deviation from the input, we recommend a percentage around 0.3%.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.target.deviation.percentage"
+        },
+        {
+            "name": "Size on Screen Target",
+            "description" : "Calculates optimal mesh and texture resolution for a given display size on screen in pixels. This method is optional and can work standalone or in conjunction with other targets. Default is 0 (=off). For more details, please see https://docs.rapidpipeline.com/docs/componentDocs/3dProcessingSchemaSettings/processor-schema-settings-v1.4#size-on-screen ",
+            "path": "modifier.screensize.pixelTarget"
+        },
+        {
+            "name": "Preserve Tiling",
+            "description" : "Preserves repeating texture coordinates (UVs) and associated texture maps. UVs are considered tiling if they extend 150% outside the 0-1 UV space.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.keepTiledUVs"
+        },
+        {
+            "name": "Atlas Mode",
+            "description" : "How many UV atlases are created. <br/>***single***: Create a single atlas for the whole asset. <br/>***separateAlpha***: Create two atlases, one for parts using alpha, and the other without alpha. This reduces texture file size because non-transparent materials don't need an alpha channel. <br/>***separateNormals***: Create two atlases, one for textured parts, the other for un-textured parts. This allows the un-textured input materials to have normal maps baked for them, without baking any other PBR textures. <br/>***separateAlphaNormals***: This combines the features of both *separateAlpha* and *separateNormals*. <br/>***separateMaterials***: Create one atlas for each input material. <br/>The *Atlas Mode* works in conjunction with *Mesh and Material Merging*. Merging is performed first, then the atlases are generated. These two settings determine how many mesh nodes and materials will be created in the output.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.materialRegenerator.uvAtlasGenerator.atlasMode"
+        },
+        {
+            "name": "Multiple Atlas Factor",
+            "description" : "Increases the number of texture sets. Each material atlas is divided by this value, so a value of 2 means each atlas becomes two atlases. <br/>This can help improve texture resolution in the output. This can be paired with a lower value for *Texture Baking Resolution* as a good alternative to using fewer atlases with a higher texture resolution (e.g. two 2048s vs. one 4096).",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.materialRegenerator.uvAtlasGenerator.atlasFactor"
+        },
+        {
+            "name": "Mesh and Material Merging",
+            "description" : "Choose a method to merge mesh nodes that share materials. Note that original node names cannot be preserved for any merged meshes. <br/>***none***: No meshes are merged. The scene graph will remain the same as in the input. This mode produces the highest number of draw calls, but it preserves all nodes and any instancing if present. <br/>***full***: All meshes are merged into a single mesh node. Per-triangle material assignments are preserved, and the output will have the same number of materials as the input. Combine with *Atlas Mode* to merge materials as desired. <br/>***byOpacity***: Meshes all non-transparent meshes together into a single mesh, and keeps all the transparent meshes separate. Transparent meshes are not combined together, because often this improves depth sorting in real-time rendering. For the resulting opaque mesh, the original per-face material assignments preserved. Combine with *Atlas Mode* to merge materials as desired. <br/>***byMaterial***: Meshes using the same material will be combined together. This can change the number of meshes, but will keep the same number of materials as the input. Combine with *Atlas Mode* to merge materials as desired.<br/>***auto***: Let RapidPipeline decide. At the moment, this is the same as using *byOpacity*. <br/>*Mesh and Material Merging* works in conjunction with *Atlas Mode*. Merging is performed first, then the atlases are generated. These two settings determine how many mesh nodes and materials will be created in the output.",
+            "path": "sceneGraphFlattening.method"
+        }
+    ]
+}

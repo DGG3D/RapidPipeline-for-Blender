@@ -1,0 +1,17 @@
+{
+    "uid"         : "MA2025052916",
+    "min_engine_version" : [7,5,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 10, "3ds Max" : 10, "blender" : 10, "UnrealEngine" : 10 },
+    "name"        : "Generate Imposter",
+    "button_name" : "Generate Imposter",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "Generates Imposter stand-in meshes consisting of one or more quad billboards representing the original input geometry. Current Method is Imposter Cloud, creating a set number of quads generated as a cloud replacing the the input model's original mesh surface.",
+    "explanation" : "Generates Imposter stand-in meshes consisting of one or more quad billboards representing the original input geometry. Current Method is Imposter Cloud.",
+    "exposed_options" : [
+        {
+            "name": "Imposter Cloud Count",
+            "description" : "Number of imposter quads to be generated for the imposter cloud.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.imposter.method.imposterCloud.count"
+        }
+   ]
+}

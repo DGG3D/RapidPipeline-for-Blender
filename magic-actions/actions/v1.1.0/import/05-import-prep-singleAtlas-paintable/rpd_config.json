@@ -1,0 +1,95 @@
+{
+  "import": {
+    "general": {
+      "rotateZUp": false
+	},
+    "CAD": {
+      "tessellationResolution": "fine", 
+      "sewTolerance": 0.05, 
+      "removeTJunctions": false,
+      "maxSurfaceDeviation": 0.4,
+      "maxAngle": 40,
+      "maxEdgeLength": 0
+    },
+    "discard": {
+      "cameras": false,
+      "lights": false,
+      "animations": false,
+      "morphTargets": false,
+      "unusedUVs": true
+    }
+  },
+  "3dEdit": {
+    "meshNormals": {
+      "recomputeInputNormals": false
+    },
+    "materialEdit": {
+      "materialReplacer": {
+        "defaultMaterial": {
+          "baseColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5
+		}
+      }
+    },
+    "repair": {
+      "windingOrder": {
+        "visibilityMode": "default",
+        "ignoreTransparency" : false,
+        "perLump": true
+      }
+    }
+  },
+"sceneGraphFlattening": {
+    "method": "full",
+    "preservedSceneDepth": 0,
+    "splitMode": "byMaterial"
+  },
+  "optimize": {
+    "3dModelOptimizationMethod": {
+      "meshAndMaterialOptimization": {
+        "decimator": {
+          "target": {
+            "faces": {
+              "value": 500000
+            }
+           },
+         "materialOptimization": {
+          "materialMerger": {
+            "materialRegenerator": {
+                "materialReplacer": {
+                  "defaultMaterial": {
+                    "generateUVs": {
+                      "cubeUnwrap": {
+                        "packUVs" : true
+                      }
+                    }
+                  }
+                }
+           }
+         }
+       }
+     }
+    }
+   }
+  },
+  "meshCulling": {
+    "occlusionCulling": {
+      "perMesh": false,
+      "quality": "default",
+      "ignoreTransparency": true,
+      "diffusion": "conservative",
+      "runAfterDecimator": false,
+      "sampleEdges": false,
+      "perLumpDecision" : true,
+      "lumpThreshold": 0.15
+    }
+  },
+  "export": [
+  ]
+}

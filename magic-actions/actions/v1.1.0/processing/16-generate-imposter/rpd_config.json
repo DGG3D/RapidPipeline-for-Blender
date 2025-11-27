@@ -1,0 +1,45 @@
+{
+"3dEdit": {
+    "modelEdit": {
+        "splitMultiMaterialMeshes": false
+    }
+},
+  "sceneGraphFlattening": {
+    "method": "full"
+  },
+  "optimize": {
+    "3dModelOptimizationMethod": {
+      "meshAndMaterialOptimization": {
+        "imposter": {
+          "method": {
+            "imposterCloud": {
+              "count": 200,
+              "similarityThreshold" : 100,
+              "clusterByNormal" : false
+            }
+          },
+          "materialMerger": {
+            "materialRegenerator": {
+              "uvAtlasGenerator": {
+                "textureBaker": {
+                  "normalMap": {
+                    "mode": "always",
+                    "recomputeNormals": true
+                  },
+                  "bakingResolution": {
+                    "default": 4096
+                  },
+                  "texMapAutoScaling": true,
+                  "topologicalHolesToAlpha": true
+                },
+                "atlasMode": "single",
+                "atlasFactor": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "export": []
+}

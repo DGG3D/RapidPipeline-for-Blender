@@ -1,0 +1,55 @@
+{
+    "export": [],
+    "optimize": {
+      "3dModelOptimizationMethod": {
+        "onlyMaterial": {
+          "materialMerger": {
+            "materialRegenerator": {
+              "uvAtlasGenerator": {
+                "textureBaker": {
+                  "normalMap": {
+                    "mode": "always",
+                    "recomputeNormals": true,
+                    "skipNormalsRoughnessThreshold": 0.0,
+                    "normalMapScale": 1.0,
+                    "tangentSpace": true
+                  },
+                  "aoBaker": {
+                    "strength": 0.5,
+                    "replaceOriginal": true,
+                    "filterRadius": 3.0,
+                    "textureSamples": 48
+                  },
+                  "bakingResolution": {
+                    "default": 2048
+                  },
+                  "sampleCount": 4,
+                  "texMapAutoScaling": true,
+                  "bakeCombinedScene": false,
+                  "topologicalHolesToAlpha": false,
+                  "powerOfTwoResolution": "ceil",
+                  "inpaintingRadius": 32.0
+                },
+                "method": "isometric",
+                "segmentationCutAngle": 88.0,
+                "segmentationChartAngle": 130.0,
+                "maxAngleError": 114.0,
+                "maxPrimitivesPerChart": 10000,
+                "cutOverlappingPieces": true,
+                "atlasMode": "separateAlpha",
+                "allowRectangularAtlases": false,
+                "packingResolution": 1024,
+                "packingPixelDistance": 2,
+                "atlasFactor": 1
+              }
+            },
+            "keepTiledUVs": false 
+          }
+        }
+      }
+    },
+  "sceneGraphFlattening": {
+    "method": "none",
+    "preservedSceneDepth": 0
+    }
+  }

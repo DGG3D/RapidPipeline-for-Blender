@@ -1,0 +1,26 @@
+{
+  "export": [],
+  "3dEdit": {
+    "meshNormals": {
+      "recomputeInputNormals": true,
+      "hardAngleThreshold": 60.0,
+      "computationMethod": "area"
+    },
+    "repair": {
+      "vertexMerging":{
+        "mergeDistance": {
+          "percentage": 0
+        },
+        "perMesh": true 
+      },
+      "meshMerging": {
+        "mode": "byMaterial"
+      },
+      "windingOrder": {
+        "visibilityMode": "default",
+        "ignoreTransparency" : false,
+        "perLump": true
+      }
+    }
+  }
+}

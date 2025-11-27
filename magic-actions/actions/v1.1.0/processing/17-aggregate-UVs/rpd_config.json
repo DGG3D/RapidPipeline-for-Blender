@@ -1,0 +1,39 @@
+{
+"sceneGraphFlattening": {
+    "method": "full",
+    "preservedSceneDepth": 0,
+    "splitMode": "byOpacity"
+  },
+    "optimize": {
+        "3dModelOptimizationMethod": {
+            "meshAndMaterialOptimization": {
+                "decimator": {
+                    "materialOptimization": {
+                     "materialUVAggregator": {
+                       "allowRectangularAtlases": true,
+                       "forceNormalRebaking": false
+                    }
+                },
+                "target": {
+                  "faces": {
+                     "value": 999999999
+                    },
+                  "deviation": {
+                     "percentage": 0
+                    }
+                },
+                "preserveTopology": false,
+                "preserveNormals": false,
+                "preserveMeshBorders": true,
+                "preserveMaterialBorders": false,
+                "collapseUnconnectedVertices": true,
+                "boundaryPreservationFactor": 0.50,
+                "collapseDistanceThreshold": 0.005,
+                "method": "quadric"
+                }
+            }
+        }
+    },
+  "export": [
+  ]
+}

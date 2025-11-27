@@ -210,6 +210,9 @@ class SaveOperator(bpy.types.Operator):
         from .draw_ui import root_element
         settings_json = root_element.getSettings()
 
+        #Remove export part from saved settings file
+        settings_json.pop("export", None)
+
         os.makedirs(os.path.dirname(dialog_file), exist_ok=True)
         if not str(dialog_file).endswith('.json'):
             dialog_file += '.json'
@@ -246,7 +249,7 @@ class DefaultsOperator(bpy.types.Operator):
         """
         #TODO ask user for confirmation
 
-        print("Reset to defaults: ")
+        self.report({'INFO'}, "Reset RapidPipeline settings")
         resetSettingsToDefault(context)
 
 class CancelProcessorOperator(bpy.types.Operator):

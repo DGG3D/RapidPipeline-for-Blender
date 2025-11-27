@@ -29,6 +29,7 @@ process) for further information.
 
 import os
 import textwrap
+from typing import Any
 
 try:
     import tomllib
@@ -73,6 +74,16 @@ class AboutDialogPanel(bpy.types.Panel):
 
     licenses: bpy.props.StringProperty() # type: ignore
 
+    dirname = os.path.dirname(__file__)
+    blender_manifest = os.path.join(dirname, 'blender_manifest.toml')
+
+    try:
+        with open(blender_manifest, 'rb') as f:
+            blender_manifest = tomllib.load(f)
+        blender_plugin_info = f"Blender Plugin Version: {blender_manifest['version']}"
+    except Exception:
+        print("Warning, could not open blender Manifest file")
+
     #https://blender.stackexchange.com/questions/74052/wrap-text-within-a-panel
     def prettyPrintLicense(self, text:str, context:bpy.types.Context):
         for area in bpy.context.screen.areas:
@@ -100,21 +111,19 @@ class AboutDialogPanel(bpy.types.Panel):
         layout = self.layout
         panel_layout = layout.row()
         panel_layout = layout.row()
-        dirname = os.path.dirname(__file__)
-        blender_manifest = os.path.join(dirname, 'blender_manifest.toml')
-        try:
-            with open(blender_manifest, 'rb') as f:
-                blender_manifest = tomllib.load(f)
-            blender_plugin_info = f"Blender Plugin Version: {blender_manifest['version']}"
-            panel_layout.label(text=blender_plugin_info)
-        except:
-            pass
+        panel_layout.label(text=self.blender_plugin_info)
         panel_layout = layout.row()
         panel_layout = layout.row()
         panel_layout = layout.row()
         op = panel_layout.operator(OpenLinkOperator.bl_idname, text="Terms and Conditions", icon='URL')
         op.url = "https://rapidpipeline.com/en/general-terms-and-conditions"
+
         self.prettyPrintLicense(bpy.context.scene.licenses, context)
+
+        panel_layout = layout.row()
+
+        op = panel_layout.operator(OpenLinkOperator.bl_idname, text="See licenses", icon='URL')
+        op.url = "https://github.com/DGG3D/RapidPipeline-for-Blender/tree/main/licenses"
 
     @classmethod
     def poll(cls, context:bpy.types.Context) -> bool:
@@ -138,17 +147,10 @@ class AboutDialog(bpy.types.Operator):
         """
         bpy.context.scene.licenses = license_disclaimer
 
-        # add license disclaimer
-
-        oss_licenses_folder = os.path.join(os.path.dirname(__file__), "licenses")
-        plugin_full_name = "The RapidPipeline 3D Processor Plugin For Blender"
-
-        self.addOSSLicense(plugin_full_name, os.path.join(oss_licenses_folder, "processorpluginblender.txt"))
-        self.addOSSLicense("Tabler Icons", os.path.join(oss_licenses_folder, "tabler.txt"))
         return {'FINISHED'}
 
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:tuple, **kwargs:dict[str,Any]):
         super().__init__(*args, **kwargs)
         return
 

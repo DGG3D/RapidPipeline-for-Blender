@@ -88,10 +88,10 @@ class CADImportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ImportHelper
 
     def execute(self, context:bpy.types.Context) -> set:
         if not os.path.isfile(self.filepath):
-            self.report({'WARNING'}, f"No file selected...")
+            self.report({'WARNING'}, "No file selected...")
             return {'FINISHED'}
 
-        self.report({'INFO'}, f"Importing CAD file...")
+        self.report({'INFO'}, "Importing CAD file...")
 
         # writing cad import settings based on selected tessellation resolution:
         cad_import_path = os.path.join(os.path.dirname(__file__), 'resources', "CAD_import")

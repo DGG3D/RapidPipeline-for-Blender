@@ -1,0 +1,17 @@
+{
+    "uid"         : "MA2025052914",
+    "min_engine_version" : [7,4,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 11, "3ds Max" : 11, "blender" : 11, "UnrealEngine" : 11 },
+    "name"        : "Generate Tiling UVs",
+    "button_name" : "Generate Tiling UVs",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "Creates tiling UVs by applying cube unwrapping also known as box mapping. UVs are not packed into an atlas and are therefore not itended to be used for texture baking. Warning: This overrides existing UV sets and might therefore lead to issues with existing Texture Sets.",
+    "explanation" : "Creates tiling UVs by applying cube unwrapping also known as box mapping. UVs are not packed into an atlas and are therefore not itended to be used for texture baking.",
+    "exposed_options" : [
+        {
+            "name": "Tiling UVs Scale",
+            "description" : "Scale factor for the cube UVs (box mapping). Higher values scale up the individual UVs which, depending on the material and texture leads to a higher tiling ratio (density) across the surface.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.materialReplacer.defaultMaterial.generateUVs.cubeUnwrap.scale"
+        }
+]
+}

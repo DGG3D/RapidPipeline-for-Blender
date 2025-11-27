@@ -31,6 +31,7 @@ import base64
 import functools
 import hashlib
 import os
+import re
 import subprocess
 
 try:
@@ -43,9 +44,11 @@ import traceback
 import bpy  # type: ignore
 
 from .gui_commons import ProcessorPlugin
+from .ui_utils import deselect_all
 
 nodes = []
 suppressed_messages = ["batch processing", "cloud session"]
+cmd_command = []
 
 class RunPipeline:
     @staticmethod
@@ -75,15 +78,20 @@ class RunPipeline:
         try:
             blender_manifest = os.path.join(dirname, 'blender_manifest.toml')
             with open(blender_manifest, 'rb') as f:
-                blender_manifest = tomllib.load(f)
-            blender_plugin_info = f"bl_{blender_manifest['version']}"
+                manifest_file = tomllib.load(f)
+            blender_plugin_info = f"bl_{manifest_file['version']}"
+        except Exception:
+            #tomllib only works for blender 4.2 and above
+            blender_manifest = os.path.join(dirname, 'blender_manifest.toml')
+            with open(blender_manifest, 'r') as f:
+                manifest_text = f.read()
+                match = re.search(r'^version\s*=\s*"([^"]+)"', manifest_text, re.MULTILINE)
+                blender_plugin_info = f"bl_{match.group(1)}"
 
-            pipeline_cmd += ['--signature', h, blender_plugin_info]
-        except:
-            #TODO tomllib does not work for blender 4.0
-            pipeline_cmd += ['--signature', h, "bl_1.0.0"]
+        pipeline_cmd += ['--signature', h, blender_plugin_info]
 
-        bpy.types.Scene.rpde_cmd = "**".join(pipeline_cmd)
+        global cmd_command
+        cmd_command = pipeline_cmd
         global nodes
         nodes = copied_nodes
         bpy.ops.wm.modal_timer_operator()
@@ -194,7 +202,7 @@ class ModalTimerOperator(bpy.types.Operator):
                     self.result.kill()
                     bpy.types.Scene.rpde_cancel = False
                     print("cancel rpde")
-                    bpy.ops.object.select_all(action='DESELECT')
+                    deselect_all()
                     for node in nodes:
                         bpy.data.objects[node.name].select_set(True)
                         original_node = node.name.split("_processed")[0]
@@ -267,7 +275,6 @@ class ModalTimerOperator(bpy.types.Operator):
                         else:
                             print("close session")
                             bpy.app.timers.register(functools.partial(self.close_rpde_session, context), first_interval=1)
-                            self.report({'INFO'}, "RPDE finished successfully.")
                             rpde_processor_log.items.add().name = "RPDE finished successfully."
                             rpde_processor_log.RPDE_message = len(rpde_processor_log.items) - 1
                             self._wm_exit(context)
@@ -294,7 +301,7 @@ class ModalTimerOperator(bpy.types.Operator):
         self.was_cancelled = False
         bpy.types.Scene.rpde_cancel = False
 
-        command_arguments:list = context.scene.rpde_cmd.split("**")
+        command_arguments = cmd_command
 
         bpy.types.Scene.rpde_running = True
         self.result = subprocess.Popen(

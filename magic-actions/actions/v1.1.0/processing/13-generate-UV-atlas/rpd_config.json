@@ -1,0 +1,28 @@
+{
+"sceneGraphFlattening": {
+    "method": "none",
+    "preservedSceneDepth": 0,
+    "splitMode": "byMaterial"
+  },
+  "optimize": {
+    "3dModelOptimizationMethod": {
+      "onlyMaterial": {
+          "materialMerger": {
+            "materialRegenerator": {
+                "materialReplacer": {
+                  "defaultMaterial": {
+                    "generateUVs": {
+                      "cubeUnwrap": {
+                        "packUVs" : true
+                      }
+                    }
+                  }
+                }
+           }
+         }
+       }
+     }
+  },
+  "export": [
+  ]
+}

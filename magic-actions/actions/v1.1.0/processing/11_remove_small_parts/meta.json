@@ -1,0 +1,17 @@
+{
+    "uid"         : "MA2025052911",
+    "min_engine_version" : [7,1,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 4, "3ds Max" : 4, "blender" : 4, "UnrealEngine" : 4 },
+    "name"        : "Remove Small Parts",
+    "button_name" : "Remove Small Parts",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "Removes small parts from the 3D model. You can select the size threshold in scene units (usually meters) under which small parts should be removed. The algorithm works on a per part (mesh lump) basis.",
+    "explanation" : "Removes small parts from the 3D model. You can select the size threshold in scene units (usually meters) under which small parts should be removed. The algorithm works on a per part (mesh lump) basis.",
+    "exposed_options" : [
+        {
+            "name": "Value (scene units)",
+            "description" : "Absolute value (in scene units), defining the largest part's (mesh lump) sidelength considered small. Usually the scene unit is one meter.",
+            "path": "meshCulling.smallFeatureCulling.sizeThreshold.value"
+        }
+   ]
+}

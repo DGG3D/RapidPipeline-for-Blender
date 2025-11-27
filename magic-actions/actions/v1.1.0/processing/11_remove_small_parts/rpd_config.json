@@ -1,0 +1,11 @@
+{
+  "meshCulling": {
+    "smallFeatureCulling": {
+      "sizeThreshold": {
+        "value": 0.01
+      },
+      "runAfterDecimator": false
+    }
+  },
+    "export": []
+}

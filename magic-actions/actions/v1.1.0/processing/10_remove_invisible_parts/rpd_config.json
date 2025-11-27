@@ -1,0 +1,15 @@
+{
+  "meshCulling": {
+    "occlusionCulling": {
+      "perMesh": false,
+      "quality": "default",
+      "ignoreTransparency": false,
+      "diffusion": "conservative",
+      "runAfterDecimator": false,
+      "sampleEdges": false,
+      "perLumpDecision" : true,
+      "lumpThreshold": 0.15
+    }
+  },
+    "export": []
+}

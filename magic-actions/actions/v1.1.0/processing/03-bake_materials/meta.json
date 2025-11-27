@@ -1,0 +1,53 @@
+{
+    "uid"         : "MA2025052903",
+    "min_engine_version" : [7,1,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 14, "3ds Max" : 14, "blender" : 14, "UnrealEngine" : 14 },
+    "name"        : "Bake Materials",
+    "button_name" : "Bake Materials",
+    "read_more" : "https://docs.rapidpipeline.com/docs/componentDocs/3dProcessor/Actions/v1.0.0/3d-processor-actions#--bake-materials",
+    "explanation_long" : "Bake materials into new PBR textures, using existing tiled texture coordinates, or generating new atlas UVs. This can help improve performance by reducing the number of materials and textures.",
+    "explanation" : "Bakes material properties such as color, normals, and occlusion into textures using newly generated UVs per material. This improves performance by reducing shader complexity.",
+    "exposed_options" : [
+        {
+            "name": "Texture Baking Resolution",
+            "description" : "Resolution for the new baked textures. Default is 2048x2048 pixels. It is best to enter a powers-of-two number, for example 256, 512, 1024, etc. Using any non-pow2 value will cause the baker to round up to the next higher pow2 resolution.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.bakingResolution.default"
+        },
+        {
+            "name": "Normal Map Mode",
+            "description" : "Normal map baking mode. <br/> - **always**: Normal maps are baked for every material. The baked maps will include details from both the original normal maps and the input geometry. <br/> - **ifInInput**: Normal maps are only baked for materials that have normal maps already. <br/> - **never**: Normal maps are not baked. <br/>. Normal map baking can be either always enforced, only performed if the input material already has normal maps, or not performed at all.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.normalMap.mode"
+        },
+        {
+            "name": "Bake Occlusion Map",
+            "description" : "Bakes an ambient occlusion texture. <br/>If 'Preserve Tiling' is enabled, then a 2nd UV is generated using an 'atlas' layout and the occlusion is baked into it. <br/>If 'Preserve Tiling' is disabled, the first UV is re-generated using an 'atlas' layout and the occlusion is baked into it.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.aoBaker",
+            "toggled": false
+        },
+        {
+            "name": "Texture Resolution Auto Scaling",
+            "description" : "When enabled the value for 'Texture Baking Resolution' is used for the largest atlas in terms of occupied 3D surface. Materials on smaller meshes will use smaller power of 2 resolutions, according to their size in 3D space. <br/>When disabled, all atlases will use the same texture resolution, as set by the 'Texture Baking Resolution' parameter.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.texMapAutoScaling"
+        },
+        {
+            "name": "Preserve Tiling",
+            "description" : "Preserves repeating texture coordinates (UVs) and associated texture maps. UVs are considered tiling if they extend 150% outside the 0-1 UV space.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.keepTiledUVs"
+        },
+        {
+            "name": "Atlas Mode",
+            "description" : "How many materials are created, each with its own UV atlas and set of PBR textures (color, normal, etc.). <br/> - **single**: Bake a single material for the whole asset. <br/> - **separateAlpha**: Bake two materials, one for parts using alpha, and the other without alpha. This reduces texture file size because the non-transparent material doesn't need an alpha channel. If no alpha was present in the input, then only one material is baked. <br/> - **separateNormals**: Bake two materials, one for parts with textures already, and the other for untextured parts. For the untextured parts, this bakes normal maps without having to bake any other PBR textures. <br/> - **separateAlphaNormals**: This combines the features of both separateAlpha and separateNormals. <br/> - **separateMaterials**: Bake the same number of materials as the input. <br/>By default atlases are separated by opacity (separateAlpha).",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.atlasMode"
+        },
+        {
+            "name": "Multiple Atlas Factor",
+            "description" : "Increases the number of texture sets. Each material atlas is divided by this value, so a value of 2 means each atlas becomes two atlases. <br/>This can help improve texture resolution in the output. This can be paired with a lower value for 'Texture Baking Resolution' as a good alternative to using fewer atlases with a higher texture resolution (e.g. two 2048s vs. one 4096).",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.atlasFactor"
+        },
+        {
+            "name": "Mesh and Material Merging",
+            "description" : "How meshes are merged together. <br/> - **none**: Do not merge meshes. <br/> - **full**: Merge all meshes into a single node using a single material. <br/> - **byOpacity**: Merge all opaque meshes into a single node using a single material, and keep alpha meshes as they were. <br/> - **byMaterial**: Merge meshes together by material, so there will be a single combined mesh for each input material. <br/> - **auto**: Same as 'byOpacity'. <br/>Full merge vs. none (no merge), or byOpacity leaving alpha parts separately, byMaterial will keep parts associated with different materials separate.",
+            "path": "sceneGraphFlattening.method"
+        }
+    ]
+}
