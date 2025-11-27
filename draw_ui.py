@@ -31,26 +31,20 @@ from __future__ import annotations
 import os
 import textwrap
 import typing
+from typing import Any
 
 import bpy
-from bpy.types import Context, UILayout
+from bpy.types import Context, PropertyGroup, UILayout
 
 from .compound_elements import SimpleContainer, TabElement, UIElement, init_ui_element
 from .gui_commons import ProcessorPlugin
-from .magic_actions_operator import (
-    ActivateMagicActionOperator,
-    DeactivateMagicActionOperator,
-    DescriptionOperator,
-    MagicActionOperator,
-    get_magic_actions,
-    get_version,
-)
+from .magic_actions_operator import DescriptionOperator, MagicActionOperator, get_magic_actions, get_version
 from .run_operator import RunOperator
 from .scene_utils import (
     blend_create_prop,
     blend_scene_getattr,
 )
-from .settings_operator import CancelProcessorOperator, RetryProcessorOperator
+from .settings_operator import CancelProcessorOperator
 
 if typing.TYPE_CHECKING:
     from main_widget import MainPanel
@@ -80,6 +74,16 @@ root_children = list(get_children(root_element))
 dirname = os.path.dirname(__file__)
 cad_import = os.path.isfile(os.path.join(dirname, "cad_import.py"))
 
+version = get_version()
+magic_actions = get_magic_actions()
+print(f"get magic actions with version: {version}")
+
+def change_drawn_version(new_version:Any):
+    global version
+    global magic_actions
+    version = new_version
+    magic_actions = get_magic_actions()
+
 if cad_import:
     from .cad_import import CADImportFileOperator
 
@@ -91,7 +95,7 @@ def draw_main_panel(main_panel:MainPanel, context:Context, preview_collections:d
         manual_settings_panel(main_panel, context, preview_collections)
 
 #https://blender.stackexchange.com/questions/74052/wrap-text-within-a-panel
-def prettyPrint(main_layout:UILayout ,text:str, context:bpy.types.Context):
+def prettyPrint(main_layout:UILayout ,text:str, context:Context) -> UILayout:
     for area in bpy.context.screen.areas:
         if area.type == 'VIEW_3D':
             break
@@ -114,18 +118,10 @@ def prettyPrint(main_layout:UILayout ,text:str, context:bpy.types.Context):
             main_layout = main_layout.column()
             main_layout.label(text=chunk)
 
+    return main_layout
+
 def manual_settings_panel(main_panel:MainPanel, context:Context, preview_collections:dict):
-    if context.scene.rpde_running and not context.scene.rpde_error:
-        running_layout = main_panel.layout.row()
-        running_layout.operator(CancelProcessorOperator.bl_idname, text="Cancel")
-        return
-    if context.scene.rpde_error:
-        error_layout = main_panel.layout.row()
-        error_layout.operator(CancelProcessorOperator.bl_idname, text="Cancel")
-        error_layout.operator(RetryProcessorOperator.bl_idname, text="Retry")
-        rpde_output = context.scene.rpde_output
-        error_layout = main_panel.layout.row()
-        prettyPrint(main_panel.layout, rpde_output, context)
+    if context.scene.rpde_running or context.scene.rpde_error:
         return
 
     pcoll = preview_collections["main"]
@@ -167,7 +163,7 @@ def manual_settings_panel(main_panel:MainPanel, context:Context, preview_collect
     _ = main_panel.layout.row()
 
 
-class ProcesslogToggle(bpy.types.PropertyGroup):
+class ProcesslogToggle(PropertyGroup):
     show_box: bpy.props.BoolProperty(
         name="",
         description="",
@@ -188,7 +184,7 @@ def magic_actions_panel(main_layout:UILayout, context:Context, preview_collectio
 
         pcoll = preview_collections["main"]
         run_icon = pcoll["run"]
-        magic_action_placeholder = pcoll["Magic_action_placeholder"]
+        magic_action_placeholder = pcoll.get("Magic_action_placeholder", None)
 
         magic_layout = main_magic_layout.row(align=True)
         magic_layout.scale_x = 2.0
@@ -201,18 +197,15 @@ def magic_actions_panel(main_layout:UILayout, context:Context, preview_collectio
         button_layout.scale_y = 1.4
         button_layout.scale_x = 1.0
 
-        selected_magic_action_str = context.scene.magic_action_property.selected_magic_action
+        selected_magic_action_str = context.scene.rpde_selected_action
         selection = "Choose a Magic Action"
 
-        version = get_version()
-
-        magic_action_sorted = get_magic_actions()
-
-        for magic_action in magic_action_sorted:
+        for magic_action in magic_actions:
             op:MagicActionOperator = button_layout.operator(
                 MagicActionOperator.bl_idname,
                 text=magic_action.action_name,
-                icon_value=getattr(context.scene, f"magic_action_{version}_{os.path.basename(magic_action.path)}").icon_id,
+                icon_value=getattr(context.scene,
+                                   f"magic_action_{version}_{os.path.basename(magic_action.path)}").icon_id,
                 depress=selected_magic_action_str == magic_action.action_name)
             action_name = magic_action.action_name
             op.magic_action_str = action_name
@@ -220,7 +213,7 @@ def magic_actions_panel(main_layout:UILayout, context:Context, preview_collectio
         if selected_magic_action_str:
             selection = selected_magic_action_str
         from .magic_actions_operator import MagicAction
-        selected_magic_action:MagicAction = next((action for action in magic_action_sorted
+        selected_magic_action:MagicAction = next((action for action in magic_actions
                                                   if action.action_name == selection
                                                   and action.action_version == version), None)
 
@@ -232,7 +225,8 @@ def magic_actions_panel(main_layout:UILayout, context:Context, preview_collectio
             try:
                 if context.scene.rpde_enable_preview:
                     image_value = None
-                    magic_action_image_str = f"magic_action_image_{version}_{os.path.basename(selected_magic_action.path)}"
+                    magic_action_image_str = (
+                        f"magic_action_image_{version}_{os.path.basename(selected_magic_action.path)}")
                     if magic_action_image_str in pcoll:
                         image_value = pcoll[magic_action_image_str]
                     if selected_magic_action and selected_magic_action.action_image and image_value:
@@ -241,41 +235,37 @@ def magic_actions_panel(main_layout:UILayout, context:Context, preview_collectio
                     else:
                         if magic_action_placeholder:
                             magic_layout.template_icon(icon_value=magic_action_placeholder.icon_id, scale=7.5)
-                        else:
-                            magic_layout.label(text="Image not loaded")
             except Exception:
                     if magic_action_placeholder:
                         magic_layout.template_icon(icon_value=magic_action_placeholder.icon_id, scale=7.5)
-                    else:
-                        magic_layout.label(text="Image not loaded")
 
             if context.scene.rpde_enable_description:
                 #description of magic action
                 if selected_magic_action:
-                    prettyPrint(magic_layout, selected_magic_action.action_description, context)
-                else:
-                    magic_layout.label(text="Warning: Could not find Magic Action description")
+                    magic_layout = prettyPrint(magic_layout, selected_magic_action.action_description, context)
+                    if selected_magic_action.action_link:
+                        magic_layout = magic_layout.column()
+                        magic_layout = magic_layout.column()
+                        op = magic_layout.operator(DescriptionOperator.bl_idname, text="Read More")
+                        op.link = selected_magic_action.action_link
             magic_layout = main_magic_layout.row()
-            box_layout = magic_layout.box()
 
-            sub = box_layout.row()
-            if selected_magic_action:
-                if selected_magic_action.action_options:
-                    for option in selected_magic_action.action_options:
-                        sub = sub.split(factor=0.33)
-                        left_col = sub.column(align=True)
-                        left_col.alignment  = 'RIGHT'
-                        right_col = sub.column(align=True)
-                        attribute_env, attribute = blend_scene_getattr(
-                            context.scene, "magic_action", path=option.option_path)
+            if selected_magic_action and selected_magic_action.action_options:
+                box_layout = magic_layout.box()
+                sub = box_layout.row()
+                for option in selected_magic_action.action_options:
+                    sub = sub.split(factor=0.33)
+                    left_col = sub.column(align=True)
+                    left_col.alignment  = 'RIGHT'
+                    right_col = sub.column(align=True)
+                    attribute_env, attribute = blend_scene_getattr(
+                        context.scene, path=option.option_path)
 
-                        #NOTE if we want to display the parent titles for additional context:
-                        option_name = option.option_name if option.option_name else option.get_option_ui_element().title
-                        left_col.label(text=option_name)
-                        blend_create_prop(right_col, attribute_env, attribute, name="")
-                        sub = box_layout.row()
-            else:
-                pass
+                    #NOTE if we want to display the parent titles for additional context:
+                    option_name = option.option_name if option.option_name else option.get_option_ui_element().title
+                    left_col.label(text=option_name)
+                    blend_create_prop(right_col, attribute_env, attribute, name="")
+                    sub = box_layout.row()
         else:
             magic_layout = main_magic_layout.row()
             warning_msg = "Please choose an action above"
@@ -285,73 +275,53 @@ def magic_actions_panel(main_layout:UILayout, context:Context, preview_collectio
         magic_layout = main_magic_layout.row()
         magic_layout = main_magic_layout.row()
 
-        if selection != "Choose a Magic Action":
-            magic_running_layout = main_layout.row()
-            magic_layout = main_layout.row()
+        draw_processor_log(context, main_layout, selection)
+
+        run_button_layout = main_layout.row()
+        if not context.scene.rpde_running:
+            run_button_layout.scale_y = 1.4
+            run_button_layout.operator(RunOperator.bl_idname, icon_value=run_icon.icon_id, text="Run")
+
+def draw_processor_log(context:Context, main_layout:UILayout, selection:str = ""):
+    if selection != "Choose a Magic Action":
+        magic_running_layout = main_layout.row()
+        magic_layout = main_layout.row()
+        magic_layout.enabled = False
+        magic_layout.label(text="Process Log")
+        magic_layout = main_layout.row()
+        box_layout = magic_layout.box()
+
+        log_layout = box_layout.row()
+        props = context.scene.rpde_processor_log
+        row= log_layout.row()
+        row.template_list(
+            listtype_name="UI_UL_list",
+            list_id="processor_list",
+            dataptr=props,
+            propname="items",
+            active_dataptr=props,
+            active_propname="RPDE_message",
+            item_dyntip_propname="RPDE_message",
+            rows=5
+        )
+
+        magic_layout = main_layout.row()
+
+        if context.scene.rpde_running:
+            magic_layout.prop(context.scene, "rpde_percentage", text="Progress", slider=True)
             magic_layout.enabled = False
-            magic_layout.label(text="Process Log")
             magic_layout = main_layout.row()
-            box_layout = magic_layout.box()
-
-            # Process log:
-            log_layout = box_layout.row()
-            props = context.scene.rpde_processor_log
-            row= log_layout.row()
-            row.template_list(
-                listtype_name="UI_UL_list",
-                list_id="processor_list",
-                dataptr=props,
-                propname="items",
-                active_dataptr=props,
-                active_propname="RPDE_message",
-                item_dyntip_propname="RPDE_message",
-                rows=5
-            )
-
-            magic_layout = main_layout.row()
-
-            if context.scene.rpde_running:
-                magic_layout.prop(context.scene, "rpde_percentage", text="Progress", slider=True)
-                magic_layout = main_layout.row()
-                magic_running_layout = main_layout.column_flow()
-                magic_running_layout.operator(CancelProcessorOperator.bl_idname, text="Cancel")
-            else:
-                magic_layout.scale_y = 1.4
-                magic_layout.operator(RunOperator.bl_idname, icon_value=run_icon.icon_id, text="Run")
+            magic_running_layout = main_layout.column_flow()
+            magic_running_layout.operator(CancelProcessorOperator.bl_idname, text="Cancel")
 
 
-class ProcessorLineProperty(bpy.types.PropertyGroup):
+
+class ProcessorLineProperty(PropertyGroup):
     name: bpy.props.StringProperty() # type: ignore
 
-class ProcessorLogProperty(bpy.types.PropertyGroup):
+class ProcessorLogProperty(PropertyGroup):
     items: bpy.props.CollectionProperty(type=ProcessorLineProperty) # type: ignore
     RPDE_message: bpy.props.IntProperty() # type: ignore
-
-#NOTE currently not in use
-def draw_magic_actions_dropdown(main_panel:MainPanel, layout:UILayout, context:Context):
-    dirname = os.path.dirname(__file__)
-    if os.path.isdir(os.path.join(dirname, 'magic-actions')):
-        layout = main_panel.layout.box()
-        layout.label(text="Preview of upcoming Magic Actions feature")
-        layout.label(text="Use Magic Actions for a quick workflow:")
-        layout.prop(context.scene.magic_action_property, "dropdown_selection")
-        if context.scene.magic_action_property.dropdown_selection == "Choose a Magic Action":
-            if context.scene.magic_action_property.warning_msg:
-                layout.label(text=context.scene.magic_action_property.warning_msg, icon='ERROR')
-
-        if context.scene.magic_action_property.action_options:
-            layout.separator()
-
-        for option in context.scene.magic_action_property.action_options:
-            attribute_env, attribute = blend_scene_getattr(
-                context.scene, "magic_action", path=option.option_path)
-
-            layout.label(text=option.get_option_ui_element().parent_element.title)
-            blend_create_prop(layout, attribute_env, attribute, name=option.get_option_ui_element().title)
-
-        _ = main_panel.layout.row()
-        _ = main_panel.layout.row()
-
 
 def getExecutionButtons(layout:UILayout, preview_collections:dict) -> None:
     from .settings_operator import DefaultsOperator, LoadOperator, SaveOperator

@@ -1,0 +1,42 @@
+{
+  "sceneGraphFlattening": {
+    "method": "full",
+    "preservedSceneDepth": 0
+  },
+  "optimize": {
+    "3dModelOptimizationMethod": {
+      "meshAndMaterialOptimization": {
+        "remesher": {
+          "target": {
+            "faces": {
+              "value": 50000
+            }
+          },
+          "materialMerger": {
+            "materialRegenerator": {
+              "uvAtlasGenerator": {
+                "textureBaker": {
+                  "normalMap": {
+                    "mode": "always",
+                    "recomputeNormals": true
+                  },
+                  "bakingResolution": {
+                    "default": 4096
+                  },
+                  "texMapAutoScaling": true
+                },
+                "atlasMode": "single",
+                "atlasFactor": 1
+              }
+            }
+          },
+          "method": "voxelization",
+          "resolution": 11,
+          "filterBackProjected": true
+        }
+      }
+    }
+  },
+  "export": [
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "import": {
+    "general": {
+      "rotateZUp": false
+    },
+    "CAD": {
+      "tessellationResolution": "fine",
+      "sewTolerance": 0.05,
+      "removeTJunctions": false,
+      "maxSurfaceDeviation": 0.4,
+      "maxAngle": 40,
+      "maxEdgeLength": 0
+    },
+    "discard": {
+      "cameras": false,
+      "lights": false,
+      "animations": false,
+      "morphTargets": false,
+      "unusedUVs": true
+    }
+  },
+  "3dEdit": {
+    "meshNormals": {
+      "recomputeInputNormals": false
+    },
+    "repair": {
+      "windingOrder": {
+        "visibilityMode": "default",
+        "ignoreTransparency": false,
+        "perLump": true
+      }
+    }
+  },
+  "sceneGraphFlattening": {
+    "method": "none",
+    "preservedSceneDepth": 0,
+    "splitMode": "byMaterial"
+  },
+  "optimize": {
+    "3dModelOptimizationMethod": {
+      "meshAndMaterialOptimization": {
+        "decimator": {
+          "materialOptimization": {
+            "materialMerger": {
+              "materialRegenerator": {
+                "materialReplacer": {
+                  "defaultMaterial": {
+                    "generateUVs": {
+                      "cubeUnwrap": {
+                        "scale": 1
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "target": {
+            "faces": {
+              "value": 500000
+            },
+            "deviation": {
+              "percentage": 0
+            }
+          },
+          "preserveNormals": true,
+          "preserveTopology": false
+        }
+      }
+    }
+  },
+  "meshCulling": {
+    "occlusionCulling": {
+      "perMesh": false,
+      "quality": "default",
+      "ignoreTransparency": true,
+      "diffusion": "conservative",
+      "runAfterDecimator": false,
+      "sampleEdges": false,
+      "perLumpDecision" : true,
+      "lumpThreshold": 0.15
+    }
+  },
+  "export": []
+}

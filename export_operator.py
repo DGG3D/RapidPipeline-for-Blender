@@ -28,9 +28,9 @@ process) for further information.
 """  # noqa: N999
 
 import os
+import pathlib
 import textwrap
 from typing import Any
-import pathlib
 
 import bpy
 import bpy_extras
@@ -67,13 +67,13 @@ class ExportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     bl_label = "Export File"
 
     filename_ext = global_export_ext
+    export_actions:list[MagicAction] = get_export_actions()
 
     def invoke(self, context, event):
         # select first export action
-        export_actions:list[MagicAction] = get_export_actions()
-        for idx, action in enumerate(export_actions):
+        for action in self.export_actions:
             if self.filename_ext.split(".")[-1] in action.action_name:
-                bpy.ops.processor.magic_action_button(magic_action_str=export_actions[idx].action_name)
+                bpy.ops.processor.magic_action_button(magic_action_str=action.action_name)
                 return super().invoke(context, event)
         return super().invoke(context, event)
 
@@ -87,18 +87,18 @@ class ExportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
     def draw(self, context):
         layout = self.layout
-        selected_magic_action_str = context.scene.magic_action_property.selected_magic_action
+        selected_magic_action_str = context.scene.rpde_selected_action
         selection = "Choose a Magic Action"
 
         from .main_widget import preview_collections
         pcoll = preview_collections["main"]
-        magic_action_placeholder = pcoll["Magic_action_placeholder"]
+        magic_action_placeholder = pcoll.get("Magic_action_placeholder", None)
         version = get_version()
         button_layout = layout
         main_magic_layout = layout
         selected_magic_action = None
 
-        for magic_action in get_export_actions():
+        for magic_action in self.export_actions:
             if self.filename_ext.split(".")[-1] in magic_action.action_name:
                 op:MagicActionOperator = button_layout.operator(
                     MagicActionOperator.bl_idname,
@@ -146,7 +146,7 @@ class ExportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
                     left_col.alignment  = 'RIGHT'
                     right_col = sub.column(align=True)
                     attribute_env, attribute = blend_scene_getattr(
-                        context.scene, "magic_action", path=option.option_path)
+                        context.scene, path=option.option_path)
 
                     option_name = option.option_name if option.option_name else option.get_option_ui_element().title
                     left_col.label(text=option_name)
@@ -322,24 +322,3 @@ def unregister():
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
-
-
-######## TODO export dropdown to delete
-#    bpy.types.Scene.export_selection = bpy.props.EnumProperty(
-#        name="",
-#        description="Choose a Export Format",
-#        items=export_enum_items,
-#        default=0,
-#        update = export_update_action
-#    ) # type: ignore
-
-#def export_update_action(self, context:bpy.types.Context):
-#    print("update export")
-#
-#def export_enum_items(self, context:bpy.types.Context) -> list:
-#    enum_items = []
-#    enum_items.append(("Export", "Export", "Export"))
-#    export_options = ['test1', 'test2', 'test3']
-#    for export_option in export_options:
-#        enum_items.append((export_option, export_option, f"{export_option}_description"))
-#    return enum_items

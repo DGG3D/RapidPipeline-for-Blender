@@ -1,0 +1,22 @@
+{
+    "uid"         : "MA2025052917",
+    "min_engine_version" : [7,5,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 13, "3ds Max" : 13, "blender" : 13, "UnrealEngine" : 13 },
+    "name"        : "Aggregate UVs",
+    "button_name" : "Aggregate UVs",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "UV layout is generally preserved but UVs and textures are aggregated from different materials into a single atlas when possible. Transparent parts are processed separately.",
+    "explanation" : "UV layout is generally preserved but UVs and textures are aggregated from different materials into a single atlas when possible.",
+    "exposed_options" : [
+        {
+            "name": "Allow Rectangular Atlas",
+            "description" : "Allows generation of rectangular POT textures when beneficial for auto sized textures.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialUVAggregator.allowRectangularAtlases"
+        },
+        {
+            "name": "Re-bake normal maps",
+            "description" : "Re-bakes normal maps when preserving UVs, even if UV overlaps are detected.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialUVAggregator.forceNormalRebaking"
+        }
+]
+}

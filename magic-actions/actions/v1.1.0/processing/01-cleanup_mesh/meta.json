@@ -1,0 +1,44 @@
+{
+    "uid"                : "MA2025052901",
+    "min_engine_version" : [7,4,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 1, "3ds Max" : 1, "blender" : 1, "UnrealEngine" : 1 },
+    "is_import_action"   : false,
+    "name"               : "Cleanup Mesh",
+    "button_name"        : "Cleanup Mesh",
+    "read_more" : "https://docs.rapidpipeline.com/docs/componentDocs/3dProcessor/Actions/v1.0.0/3d-processor-actions#--cleanup-mesh",
+    "explanation_long"  : "Fix mesh assets by re-calculating surface normals, merging disconnected vertices, and flipping inverted meshes.",
+    "explanation"        : "Cleans up a model by recomputing mesh normals, removing duplicate vertices and optionally correcting the winding order or merging vertices by distance.",
+    "exposed_options" : [
+        {
+            "name": "Recompute Input Normals",
+            "description" : "Discards the original normals and recomputes them. This can help with flipped, broken or flat-shaded input normals.",
+            "path": "3dEdit.meshNormals.recomputeInputNormals"
+        },
+        {
+            "name": "Normal Hard Angle Threshold",
+            "description" : "Hard threshold (degrees) used for normal generation (0 = everything flat, 180 = everything smooth). <br/><br/>![normal-hard-angle-threshold](import/00-cad_import/normal-hard-angle-threshold.webp)",
+            "path": "3dEdit.meshNormals.hardAngleThreshold"
+        },
+        {
+            "name": "Normal Computation Method",
+            "description" : "Weighting method for mesh normals. Angle works well for most surfaces, whereas Area (face-weighted normals)  especially well when a model has bevels or fillets. <br/><br/>![normal-computation-method](import/00-cad_import/normal-computation-method.webp)",
+            "path": "3dEdit.meshNormals.computationMethod"
+        },
+        {
+            "name": "Vertex Merging Distance",
+            "description" : "Distance between vertices that should be merged, as a percentage of the model bounding box size.",
+            "path": "3dEdit.repair.vertexMerging.mergeDistance.percentage"
+        },
+        {
+            "name": "Prevent cross-mesh vertex merging",
+            "description" : "Enable this to merge vertices only within the same meshes. This avoids merging vertices across neighboring mesh chunks.",
+            "path": "3dEdit.repair.vertexMerging.perMesh"
+        },
+        {
+            "name": "Fix Winding Order",
+            "description" : "Automatically fix the winding order of parts on import. <br/>This is helpful when importing CAD assets, if patches are showing up inverted after being imported and tessellated. <br/>It will attempt to detect flipped mesh chunks, and flip all the faces of each affected chunk. <br/>Note that some parts may still be flipped, be sure to check the results afterwards. To check whether chunks are flipped, it helps to enable backface culling in your application's view settings. <br/><br/>![fix-winding-order](import/00-cad_import/fix-winding-order.webp)",
+            "path": "3dEdit.repair.windingOrder",
+            "toggled": false
+        }
+    ]
+}

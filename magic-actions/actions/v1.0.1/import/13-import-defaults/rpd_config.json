@@ -1,0 +1,29 @@
+{
+    "export": [],
+  "import": {
+    "general": {
+      "rotateZUp": false,
+      "fixAnimationData": true,
+      "normalmapYFlip": false
+    },
+    "USD": {
+      "profile": "arkit", 
+      "purpose": "render",
+      "convertDisplayColors": "never"
+    },
+    "discard": {
+      "cameras": false,
+      "lights": false,
+      "animations": false,
+      "morphTargets": false,
+      "unusedUVs": false
+    },
+    "materials": {
+      "undefinedDefaults": {
+          "baseColor": [1,1,1,1],
+          "metallic": 0,
+          "roughness": 0.5
+       }
+    }
+  }
+  }

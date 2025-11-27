@@ -1,0 +1,49 @@
+{
+  "export": [
+    {
+      "fileName": "",
+      "preserveTextureFilenames": false,
+      "textureMapFilePrefix": "",
+      "reencodeTextures": "auto",
+      "discard": {
+        "unusedUVs": false,
+        "emptyNodes": false
+      },
+      "format": {
+        "fbx": {
+          "3dsMaxPhysicalMaterial": {
+            "maxTextureResolution": {
+              "default": 4096
+            },
+            "textureFormat": {
+              "default": "auto",
+              "bump": "auto"
+            },
+            "textureCompression": {
+              "jpeg": {
+                "quality": 90,
+                "qualityNormals": 95
+              },
+              "webp": {
+                "quality": 95,
+                "qualityNormals": 95
+              },
+              "ktx": {
+                "compressionSpeed": 2,
+                "quality": 128,
+                "uastcQuality": "default",
+                "mipmapCount": 2
+              }
+            }
+          },
+          "units": "m",
+          "unitConversion": true,
+          "axisSystem": "original",
+          "excludeTangents": true,
+          "flipNormalmapY": false,
+          "preferBinaryFormat": true
+        }
+      }
+    }
+  ]
+}

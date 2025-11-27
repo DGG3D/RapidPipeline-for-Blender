@@ -1,0 +1,32 @@
+{
+  "export": [
+    {
+      "fileName": "",
+      "preserveTextureFilenames": false,
+      "textureMapFilePrefix": "",
+      "reencodeTextures": "auto",
+      "discard": {
+        "unusedUVs": false,
+        "emptyNodes": false
+      },
+      "format": {
+        "ctm": {
+          "defaultMaterial": {
+            "maxTexResolution": {
+              "default": 4096
+            },
+            "textureFormat": {
+              "default": "auto"
+            },
+            "textureCompression": {
+              "jpeg": {
+                "quality": 90,
+                "qualityNormals": 95
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

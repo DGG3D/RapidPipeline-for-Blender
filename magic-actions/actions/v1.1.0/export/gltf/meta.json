@@ -1,0 +1,60 @@
+{
+    "uid"                : "MA2025052900",
+    "min_engine_version" : [7,1,0],
+    "ui_prio_hints"      : { "Substance" : -1, "Maya" : 0, "3ds Max" : 0, "blender" : 0, "UnrealEngine" : 0 },
+    "name"               : "Export glTF",
+    "button_name"        : "Export glTF",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long"  : "",
+    "explanation"        : "Exports a model to the glTF format.",
+    "exposed_options" : [
+        {
+            "name": "Geometry Compression",
+            "description" : "Desired geometry compression method for glTF/glb exports.",
+            "path": "export.format.gltf.geometryCompression"
+        },
+        {
+            "name": "Texture Map Format",
+            "description" : "Format for exported texture maps. Default is auto = jpg + png for alpha textures.",
+            "path": "export.format.gltf.pbrMaterial.textureFormat.default"
+        },
+        {
+            "name": "Normal Map Format",
+            "description" : "Format for exported normal maps. Default is auto = jpg + png for alpha textures.",
+            "path": "export.format.gltf.pbrMaterial.textureFormat.normal"
+        },
+        {
+            "name": "Texture Resolution",
+            "description" : "Resolution for exported texture maps. Default is 4096x4096.",
+            "path": "export.format.gltf.pbrMaterial.maxTextureResolution.default"
+        },
+        {
+            "name": "Separate Occlusion",
+            "description" : "Export occlusion as a separate map instead of including it in the ORM map.",
+            "path": "export.format.gltf.pbrMaterial.separateOcclusionMap"
+        },
+        {
+            "name": "Exclude Material Extensions",
+            "description" : "If true, no glTF material PBR extensions are exported. Transmission/Volume will fall back to alpha blend.",
+            "path": "export.format.gltf.pbrMaterial.excludePbrExtensions"
+        },
+        {
+            "name": "Force Double Sided Materials",
+            "description" : "Exports all materials as double sided.",
+            "path": "export.format.gltf.pbrMaterial.forceDoubleSidedMaterials"
+        },
+        {
+            "name": "Force Unlit Materials",
+            "description" : "Enables that all materials are specified as unlit, for .gltf/.glb export.",
+            "path": "export.format.gltf.pbrMaterial.forceUnlitMaterials"
+        },
+        {
+            "name": "Convert to MetalRoughness",
+            "description" : "Converts materials from spec/gloss to metal/rough.",
+            "path": "export.format.gltf.pbrMaterial.convertMetalRoughness"
+        }
+    ]
+}
+
+
+

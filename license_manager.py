@@ -27,9 +27,11 @@ rpde/EULA_RapidPipelineEngine.rtf after installation, or during the install
 process) for further information.
 """
 
+import http.client
+import json
 import os
 import webbrowser
-from typing import Any
+from typing import Any, Tuple
 
 import bpy  # type: ignore
 
@@ -57,6 +59,8 @@ class EnterLicenseOperator(bpy.types.Operator):
     def execute(self, context:bpy.types.Context) -> set[str]:
         if context.scene.t_and_c_agreed:
             bpy.types.Scene.has_license = ProcessorLicense.overrideSessionLicense(context)
+            bpy.types.Scene.rpde_draw_ui = True
+            bpy.types.Scene.override_token = False
             return {'FINISHED'}
         else:
             self.report({'ERROR'}, "Please accept the Terms and Conditions to continue!")
@@ -206,6 +210,38 @@ class ProcessorLicense:
         if not ProcessorLicense.hasLicense():
             return False
         return True
+
+    @staticmethod
+    def getUserInformation() -> Tuple[int, dict]:
+        api_token = ProcessorLicense.getAPIToken()
+        if not api_token:
+            return None
+
+        conn = http.client.HTTPSConnection("api.rapidpipeline.com")
+        payload = ''
+        headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {api_token}'
+        }
+        conn.request("GET", "/api/v2/user", payload, headers)
+        res = conn.getresponse()
+        return res.getcode(), json.loads(res.read().decode("utf-8"))
+
+    @staticmethod
+    def isTokenValid() -> bool:
+        code, info = ProcessorLicense.getUserInformation()
+        if code != 200:
+            print(f'{info.get("message")} - {info.get("error")}')
+            return False
+        return True
+
+    @staticmethod
+    def getUserEmail() -> str:
+        code, info = ProcessorLicense.getUserInformation()
+        if code != 200:
+            print(f'{info.get("message")} - {info.get("error")}')
+            return ""
+        return info.get("data", {}).get("email", "")
 
 clss = (
     LicensePanel, EnterLicenseOperator, CreateTokenOperator, CancelTokenOperator,

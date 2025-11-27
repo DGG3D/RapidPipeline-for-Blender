@@ -1,0 +1,22 @@
+{
+    "uid"         : "MA2025052915",
+    "min_engine_version" : [7,4,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 2, "3ds Max" : 2, "blender" : 2, "UnrealEngine" : 2 },
+    "name"        : "Scene Graph Flattening",
+    "button_name" : "Scene Graph Flattening",
+    "read_more" : "https://docs.rapidpipeline.com/",
+    "explanation_long" : "Scene Graph Flattening settings allow nodes to be combined according to various properties. Material merging is automatically handled when nodes are flattened, depending on the method.",
+    "explanation" : "Scene Graph Flattening settings allow nodes to be combined according to various properties.",
+    "exposed_options" : [
+        {
+            "name": "Method",
+            "description" : "Methods for controlling how nodes are combined. By Opacity, auto and full will also flatten materials.",
+            "path": "sceneGraphFlattening.method"
+        },
+        {
+            "name": "Preserve Scene Graph Level",
+            "description" : "Number of levels in the scene structure that should not be flattened. The higher the number the more levels are preserved.",
+            "path": "sceneGraphFlattening.preservedSceneDepth"
+        }
+   ]
+}

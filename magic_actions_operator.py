@@ -28,6 +28,7 @@ process) for further information.
 """
 
 import os
+import webbrowser
 
 import bpy  # type: ignore
 
@@ -43,7 +44,7 @@ class MagicActionOption():
     option_description = ""
     option_toggled = False
 
-    def __init__(self, path:set, name:str="", description:str="", toggled = False):
+    def __init__(self, path:set, name:str="", description:str="", toggled:bool = False):
         self.option_path = path
         self.option_name = name
         self.option_description = description
@@ -61,8 +62,17 @@ class MagicAction():
     action_version = ""
     ui_prio = 0
     action_options:list[MagicActionOption] = []
+    action_link:str = ""
 
-    def __init__(self, name:str, description:str, action_config:dict, path:str, version:str, action_image:str = "", ui_prio:int = 0):
+    def __init__(self,
+                 name:str,
+                 description:str,
+                 action_config:dict,
+                 path:str,
+                 version:str,
+                 action_image:str = "",
+                 ui_prio:int = 0,
+                 action_link:str = ""):
         self.action_name = name
         self.action_description = description
         self.action_config = action_config
@@ -71,8 +81,9 @@ class MagicAction():
         self.action_version = version
         self.ui_prio = ui_prio
         self.action_options = self.set_options()
+        self.action_link = action_link
 
-    def set_options(self):
+    def set_options(self) -> list[MagicActionOption]:
         action_options = []
         magic_action_meta_path = os.path.join(self.path, "meta.json")
         magic_action_meta = JSonUtils.loadJSON(magic_action_meta_path)
@@ -116,7 +127,8 @@ def set_magic_actions(type:str) -> list[MagicAction]:
                     os.path.join(magic_action_folder, magic_action),
                     global_magic_action_version,
                     action_image=magic_action_image_path,
-                    ui_prio=magic_action_meta.get("ui_prio_hints", {}).get("blender", 0))
+                    ui_prio=magic_action_meta.get("ui_prio_hints", {}).get("blender", 0),
+                    action_link=magic_action_meta.get("read_more", ""))
                 magic_actions.append(action)
     return magic_actions
 
@@ -141,6 +153,13 @@ def set_version(version:str):
     global_import_actions = set_magic_actions("import")
     global_export_actions = set_magic_actions("export")
 
+def get_all_actions() -> list[MagicAction]:
+    output = []
+    output.extend(get_import_actions())
+    output.extend(get_magic_actions())
+    output.extend(get_export_actions())
+    return output
+
 def get_magic_actions() -> list[MagicAction]:
     return get_magic_actions_sorted(global_magic_actions)
 
@@ -158,74 +177,6 @@ def get_magic_actions_sorted(global_magic_action:list) -> list[MagicAction]:
 def get_version() -> str:
     return global_magic_action_version
 
-#NOTE unused MagicActionDropdown
-class MagicActionProperties(bpy.types.PropertyGroup):
-    selected_magic_action = ""
-    magic_actions:list[MagicAction] = []
-    dirname = os.path.dirname(__file__)
-    magic_action_path = os.path.join(dirname, 'magic-actions', 'actions')
-    warning_msg: bpy.props.StringProperty(default="") # type: ignore
-
-    if os.path.isdir(os.path.join(magic_action_path)):
-        for version in os.listdir(magic_action_path):
-            for type in ('import', 'processing', 'export'):
-                magic_action_folder = os.path.join(magic_action_path, version, type)
-
-                if os.path.isdir(magic_action_folder):
-                    for magic_action in os.listdir(magic_action_folder):
-                        if os.path.isdir(os.path.join(magic_action_folder, magic_action)):
-                            magic_action_meta_path = os.path.join(magic_action_folder, magic_action, "meta.json")
-                            magic_action_config_path = os.path.join(magic_action_folder, magic_action, "rpd_config.json")
-                            magic_action_meta = JSonUtils.loadJSON(magic_action_meta_path)
-                            magic_action_config = JSonUtils.loadJSON(magic_action_config_path)
-                            name = magic_action_meta.get("button_name", magic_action_meta.get("name", ""))
-                            description = magic_action_meta.get("explanation", "")
-                            # do not displac magic actions that include cad import
-                            if "is_import_action" in magic_action_meta and magic_action_meta["is_import_action"]:
-                                continue
-                            action = MagicAction(
-                                name,
-                                description,
-                                magic_action_config,
-                                os.path.join(magic_action_folder, magic_action),
-                                version)
-                            magic_actions.append(action)
-                else:
-                    print("Warning: Could not find magic actions folder!")
-
-    def update_action(self, context:bpy.types.Context):
-        selected_option = self.dropdown_selection
-        self.warning_msg = "Please choose a valid option"
-
-        for magic_action in self.magic_actions:
-            if selected_option == magic_action.action_name and magic_action.action_version == get_version():
-                # reset settings when magic action is selected
-                resetSettingsToDefault(context)
-
-                setValue(context, magic_action.action_config)
-                # create settings based on "exposed_options" as props
-                break
-
-    def enum_items(self, context:bpy.types.Context) -> list:
-        enum_items = []
-        enum_items.append(("Choose a Magic Action", "Choose a Magic Action", "Choose a Magic Action"))
-        for idx, magic_action in enumerate(self.magic_actions):
-            enum_items.append(
-                (self.magic_actions[idx].action_name,
-                 self.magic_actions[idx].action_name,
-                 self.magic_actions[idx].action_description,
-                 getattr(context.scene, f"magic_action_{os.path.basename(magic_action.path)}").icon_id, idx+1))
-        return enum_items
-
-    dropdown_selection: bpy.props.EnumProperty(
-        name="",
-        description="Choose a Magic Action",
-        items=enum_items,
-        default=0,
-        update = update_action
-    ) # type: ignore
-
-
 class MagicActionOperator(bpy.types.Operator):
     bl_idname = "processor.magic_action_button"
     bl_label = "magic_action_button"
@@ -235,9 +186,9 @@ class MagicActionOperator(bpy.types.Operator):
 
     def execute(self, context:bpy.types.Context) -> set:
         self.report({'INFO'}, f"Selected Magic Action: {self.magic_action_str}")
-        MagicActionProperties.selected_magic_action = self.magic_action_str
+        bpy.types.Scene.rpde_selected_action = self.magic_action_str
 
-        magic_action:MagicAction = next((action for action in context.scene.magic_action_property.magic_actions
+        magic_action:MagicAction = next((action for action in get_all_actions()
                                                   if action.action_name == self.magic_action_str
                                                   and action.action_version == get_version()), None)
 
@@ -250,14 +201,14 @@ class MagicActionOperator(bpy.types.Operator):
         self.toggle_action_options(context)
         return {'FINISHED'}
 
-    def toggle_action_options(self, context):
-        magic_action:MagicAction = next((action for action in context.scene.magic_action_property.magic_actions
+    def toggle_action_options(self, context:bpy.types.Context):
+        magic_action:MagicAction = next((action for action in get_all_actions()
                                     if action.action_name == self.magic_action_str
                                     and action.action_version == get_version()), None)
         for option in magic_action.action_options:
             if option.option_toggled is not None:
                 attribute_env, attribute = blend_scene_getattr(
-                                    context.scene, "magic_action", path=option.option_path)
+                                    context.scene, path=option.option_path)
                 setattr(attribute_env, attribute, option.option_toggled)
 
 class ActivateMagicActionOperator(bpy.types.Operator):
@@ -286,19 +237,19 @@ class DescriptionOperator(bpy.types.Operator):
     bl_label = "magic_action_description"
     bl_options = {'REGISTER', 'UNDO'}
 
+    link: bpy.props.StringProperty()  #type: ignore
+
     def execute(self, context:bpy.types.Context) -> set:
-        print("TODO link doc page of magic action")
+        webbrowser.open(self.link)
         return {'FINISHED'}
 
 def register():
     reg()
 
-    bpy.types.Scene.magic_action_property = bpy.props.PointerProperty(type=MagicActionProperties)
-
 def unregister():
     unreg()
 
-clss = (MagicActionProperties, ActivateMagicActionOperator, DeactivateMagicActionOperator,
+clss = (ActivateMagicActionOperator, DeactivateMagicActionOperator,
         MagicActionOperator, DescriptionOperator,
         )
 

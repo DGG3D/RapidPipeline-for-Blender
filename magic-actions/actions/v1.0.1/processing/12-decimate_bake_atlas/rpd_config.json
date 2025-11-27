@@ -1,0 +1,64 @@
+{
+  "sceneGraphFlattening": {
+    "method": "auto",
+    "preservedSceneDepth": 0
+  },
+  "optimize": {
+    "3dModelOptimizationMethod": {
+      "meshAndMaterialOptimization": {
+        "decimator": {
+          "materialOptimization": {
+            "materialMerger": {
+              "materialRegenerator": {
+                "uvAtlasGenerator": {
+                  "textureBaker": {
+                  "normalMap": {
+                    "mode": "always",
+                    "recomputeNormals": true,
+                    "skipNormalsRoughnessThreshold": 0.0,
+                    "normalMapScale": 1.0,
+                    "tangentSpace": true
+                  },
+                  "aoBaker": {
+                    "strength": 0.5,
+                    "replaceOriginal": true,
+                    "filterRadius": 3.0,
+                    "textureSamples": 48
+                  },
+                    "bakingResolution": {
+                      "default": 4096
+                    },
+                  "sampleCount": 4,
+                  "texMapAutoScaling": true
+                  },
+                  "packingResolution": 1024,
+                  "cutOverlappingPieces": true,
+                  "method": "isometric",
+                  "atlasMode": "separateAlpha",
+                  "atlasFactor": 1
+                }
+              },
+              "keepTiledUVs": false,
+              "tilingThreshold": 1.0
+            }
+          },
+          "target": {
+            "faces": {
+              "value": 150000
+            },
+            "deviation": {
+              "percentage": 0.005
+            }
+          },
+          "preserveNormals": false
+        }
+      }
+    }
+  },
+  "modifier": {
+    "screensize": {
+      "pixelTarget": 0
+    }
+  },
+  "export": []
+}

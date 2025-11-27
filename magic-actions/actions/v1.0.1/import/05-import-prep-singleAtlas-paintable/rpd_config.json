@@ -1,0 +1,109 @@
+{
+  "import": {
+    "general": {
+      "rotateZUp": false
+	},
+    "CAD": {
+      "tessellationResolution": "fine", 
+      "sewTolerance": 0.05, 
+      "removeTJunctions": false 
+    },
+    "discard": {
+      "cameras": false,
+      "lights": false,
+      "animations": false,
+      "morphTargets": false,
+      "unusedUVs": true
+    }
+  },
+  "3dEdit": {
+    "meshNormals": {
+      "recomputeInputNormals": false
+    },
+    "materialEdit": {
+      "materialReplacer": {
+        "defaultMaterial": {
+          "baseColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "metallic": 0.0,
+          "roughness": 0.5
+		}
+      }
+    },
+    "repair": {
+      "windingOrder": {
+        "visibilityMode": "default",
+        "ignoreTransparency" : false,
+        "perLump": true
+      }
+    }
+  },
+"sceneGraphFlattening": {
+    "method": "full",
+    "preservedSceneDepth": 0,
+    "splitMode": "auto"
+  },
+  "optimize": {
+    "3dModelOptimizationMethod": {
+      "meshAndMaterialOptimization": {
+        "decimator": {
+          "target": {
+            "faces": {
+              "value": 500000
+            }
+           },
+         "materialOptimization": {
+          "materialMerger": {
+            "materialRegenerator": {
+              "uvAtlasGenerator": {
+                "textureBaker": {
+                  "bakingResolution": {
+                    "default": 0
+                  },
+                  "sampleCount": 4,
+                  "texMapAutoScaling": true,
+                  "bakeCombinedScene": false,
+                  "topologicalHolesToAlpha": false,
+                  "powerOfTwoResolution": "ceil",
+                  "inpaintingRadius": 32.0
+                },
+                "method": "isometric",
+                "segmentationCutAngle": 88.0,
+                "segmentationChartAngle": 130.0,
+                "maxAngleError": 114.0,
+                "maxPrimitivesPerChart": 10000,
+                "cutOverlappingPieces": true,
+                "atlasMode": "single",
+                "allowRectangularAtlases": false,
+                "packingResolution": 1024,
+                "packingPixelDistance": 2,
+                "atlasFactor": 1
+             }
+           },
+          "keepTiledUVs": false,
+          "tilingThreshold": 1.5
+         }
+       }
+     }
+    }
+   }
+  },
+  "meshCulling": {
+    "occlusionCulling": {
+      "perMesh": false,
+      "quality": "default",
+      "ignoreTransparency": true,
+      "diffusion": "conservative",
+      "runAfterDecimator": false,
+      "sampleEdges": false,
+      "perLumpDecision" : true,
+      "lumpThreshold": 0.15
+    }
+  },
+  "export": [
+  ]
+}

@@ -299,6 +299,8 @@ class UIElementOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 class UIElement():
+    inactive = False
+
     def __init__(
             self, name: str, settingid:str, parent: "UIElement",
             schema: dict={}, uuid_dict:dict={}, type_required: str = "") -> None:
@@ -320,6 +322,9 @@ class UIElement():
 
     def isdrawn(self) -> bool:
         if not self.settingid or self.settingid in self.hidden_settings:
+            return False
+
+        if self.inactive:
             return False
 
         if not bpy.context.scene.rpde_detail_mode:
@@ -356,8 +361,7 @@ class UIElement():
                     oneof_path = self.parent_element.path.copy()
                     oneof_path.append("Oneof")
                     attribute_env, oneof_selection = blend_scene_getattr(
-                        bpy.context.scene, self.parent_element.parent_element.settingid,
-                        "oneOf", oneof_path)
+                        bpy.context.scene, oneof_path)
                     oneof_attribute = getattr(attribute_env, oneof_selection)
                     if not oneof_attribute == self.settingid:
                         return False
@@ -395,6 +399,8 @@ class UIElement():
     # if the value is a boolean than returns that boolean if the setting is 'toggleable'
     # otherwise returns True
     def getSettings(self) -> Any:
+        if self.inactive:
+            return None
         try:
             setting = getattr(*self.get_env_uuid(bpy.context))
             if isinstance(setting, float):
@@ -430,7 +436,7 @@ class UIElement():
             enum_options = []
             for element in self.schema['enum']:
                 enum_options.append((element,)*3)
-            blend_scene_setattr_enum(bpy.types.Scene, self.settingid, self.uuid_dict,
+            blend_scene_setattr_enum(bpy.types.Scene,
                 bpy.props.EnumProperty(items=enum_options), self.path)
             blend_scene_setattr(
                 *self.get_env_uuid(context), value)
@@ -442,7 +448,7 @@ class UIElement():
 
     def get_env_uuid(self, context:bpy.types.Context)-> tuple[Any,str]:
         if not self.env_uuid or not self.check_scene(self.env_uuid[0]):
-            self.env_uuid = blend_scene_getattr(context.scene, self.settingid, self.type, self.path)
+            self.env_uuid = blend_scene_getattr(context.scene, self.path)
         return self.env_uuid
 
     def check_scene(self, scene:bpy.types.Scene) -> bool:

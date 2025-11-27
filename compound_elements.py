@@ -31,6 +31,7 @@ import traceback
 from typing import Any, Dict, List
 
 import bpy  # type: ignore
+from bpy.types import Context, Panel, UILayout
 
 from .basic_elements import (
     BooleanProperty,
@@ -42,7 +43,15 @@ from .basic_elements import (
     StringProperty,
 )
 from .gui_commons import ProcessorPlugin, UIElement
-from .scene_utils import blend_create_prop, blend_scene_getattr, blend_scene_setattr, get_uuid, set_uuid
+from .scene_utils import (
+    blend_create_prop,
+    blend_scene_getattr,
+    blend_scene_setattr,
+    get_path,
+    get_ui_element,
+    get_uuid,
+    set_uuid,
+)
 
 ui_elements_dict:dict[str, UIElement] = {} #key -> paths, value -> UIElement
 def init_ui_element(
@@ -171,7 +180,7 @@ class CompoundUIElement(UIElement):
 
     def getSettings(self) -> dict:
         out_settings = {}
-        if (getattr(*blend_scene_getattr(bpy.context.scene, self.settingid, self.type, self.path))) or (
+        if (getattr(*blend_scene_getattr(bpy.context.scene, self.path))) or (
             # check for empty properties specifically for "addcheckertexture"
             not self.isToggleable() and self.schema.get("properties", {}) != {}):
             for e in self.child_elements:
@@ -186,10 +195,15 @@ class CompoundUIElement(UIElement):
                         else:
                             out_settings[e.name] = settings
                     else:
-                        # case for empty children of oneOfs (like with type:stl in export)
-                        toggle_children = getattr(*blend_scene_getattr(bpy.context.scene, e.settingid, e.type, e.path))
-                        if not out_settings and toggle_children:
-                            return {e.name : {}}
+                        continue
+
+            if not out_settings:
+                if len(self.child_elements) >= 1:
+                    # case for empty children of oneOfs (like with type:stl in export)
+                    toggle_children = getattr(*blend_scene_getattr(bpy.context.scene, self.child_elements[0].path))
+                    if toggle_children:
+                        return {self.child_elements[0].name : {}}
+
             return out_settings
         else:
             return None
@@ -226,7 +240,7 @@ class SimpleContainer(CompoundUIElement):
         depress = context.scene.tabelements == self.settingid
         simple_container_operator = panel_layout.operator(
             SimpleContainerOperator.bl_idname,
-            text=self.name,
+            text=self.title,
             icon_value=getattr(context.scene, f"icon_{self.settingid}").icon_id,
             depress=depress)
 
@@ -246,7 +260,7 @@ class SimpleContainer(CompoundUIElement):
         blend_scene_setattr(*self.get_env_uuid(context), bool(value))
 
     def get_env_uuid(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
-        return blend_scene_getattr(bpy.context.scene, self.settingid, self.type, self.path)
+        return blend_scene_getattr(bpy.context.scene, self.path)
 
 class OneOfContainer(CompoundUIElement):
     def __init__(self, name: str, settingid: str, parent: "UIElement", uuid_dict:dict, schema: dict = {}):
@@ -310,10 +324,10 @@ class OneOfContainer(CompoundUIElement):
             oneof_path = self.path.copy()
             oneof_path.append("Oneof")
             attribute_env, attribute = blend_scene_getattr(
-                bpy.context.scene, self.settingid, self.type, oneof_path)
+                bpy.context.scene, oneof_path)
         else:
             attribute_env, attribute = blend_scene_getattr(
-                bpy.context.scene, self.settingid, self.type, self.path)
+                bpy.context.scene, self.path)
         return getattr(attribute_env, attribute)
 
     def setValue(self, value:Any, context:bpy.types.Context) -> bool:
@@ -322,7 +336,7 @@ class OneOfContainer(CompoundUIElement):
             oneof_path = self.path.copy()
             oneof_path.append("Oneof")
             attribute_env, attribute = blend_scene_getattr(
-                bpy.context.scene, self.settingid, self.type, oneof_path)
+                bpy.context.scene, oneof_path)
             #find the correct enum:
             possible_enums = bpy.context.scene.bl_rna.properties[str(attribute)].enum_items
             for enum in possible_enums:
@@ -368,6 +382,10 @@ class EmptyCompoundUIElement(CompoundUIElement):
                             else:
                                 out_settings[e.name] = settings
                 return out_settings
+        else:
+            # case for Add Checker texture
+            if self.name and self.name == "addCheckerTexture":
+                return {}
 
     def setDefaultValue(self, context:bpy.types.Context) -> None:
         if self.default:
@@ -381,10 +399,10 @@ class EmptyCompoundUIElement(CompoundUIElement):
             oneof_path = self.path.copy()
             oneof_path.append("Oneof")
             attribute_env, attribute = blend_scene_getattr(
-                bpy.context.scene, self.settingid, self.type, oneof_path)
+                bpy.context.scene, oneof_path)
         else:
             attribute_env, attribute = blend_scene_getattr(
-                bpy.context.scene, self.settingid, self.type, self.path)
+                bpy.context.scene, self.path)
         return getattr(attribute_env, attribute)
 
     def setValue(self, value:Any, context:bpy.types.Context) -> bool:
@@ -394,7 +412,7 @@ class EmptyCompoundUIElement(CompoundUIElement):
             oneof_path = self.path.copy()
             oneof_path.append("Oneof")
             attribute_env, attribute = blend_scene_getattr(
-                bpy.context.scene, self.settingid, self.type, oneof_path)
+                bpy.context.scene, oneof_path)
             #find the correct enum:
             possible_enums = bpy.context.scene.bl_rna.properties[str(attribute)].enum_items
             for enum in possible_enums:
@@ -404,21 +422,84 @@ class EmptyCompoundUIElement(CompoundUIElement):
         # in any case set UIElement to true
         return super().setValue(bool(value), context)
 
+class PopupOverrideOperator(bpy.types.Operator):
+    bl_idname = "processor.popupoverride"
+    bl_description = "Click to see and edit more Texture Map Thresholds"
+    bl_label = "Expand"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    target_uuid: bpy.props.StringProperty() # type: ignore
+
+    def execute(self, context:bpy.types.Context) -> set[str]:
+        path = get_path(self.target_uuid)
+        ui_element = get_ui_element(path)
+        try:
+            if ui_element:
+                ui_element.create_children(context)
+        except AttributeError:
+            print("could not find children of PopupOverrideElement")
+            traceback.print_stack()
+            traceback.print_exc()
+        return {'FINISHED'}
+
 class PopupOverrideElement(CompoundUIElement):
     """
     Compound Widget for groups of similar settings. Assumes that the first item is a "Default",
     and follow up ones are overrides that will be set through a popup.
     """
-
     def __init__(self, name: str, settingid: str, parent: "UIElement", uuid_dict:dict, schema: dict = {}):
         super().__init__(name, settingid, parent, schema, uuid_dict, "object")
-        self.createChildElements()
+        self.createChildElements(default_element=True)
 
-    def openDialog(self):
-        self.dialog_widget.exec()
+    def createChildElements(self, default_element:bool = False):
+        """
+        Create sub-elements, based on the current UIElement schema properties.
+        """
 
-    def closeDialog(self):
-        self.dialog_widget.close()
+        if "properties" not in self.schema:
+            return
+        for idx, name in enumerate(self.schema["properties"]):
+            if name == 'version':
+                continue
+
+            settingid = self.schema['properties'][name].get('settingid', 'settingid_not_found')
+            child_element = init_ui_element(name, settingid, self, self.uuid_dict, self.schema["properties"][name])
+            if not child_element:
+                continue
+
+            self.child_elements.append(child_element)
+            self.children_by_level[child_element.getLevel()].append(child_element)
+
+            # hide all children except for the default value
+            if default_element and idx != 0:
+                child_element.inactive = True
+
+    def isdrawn(self) -> bool:
+        return super().isdrawn()
+
+    def create_children(self, context:bpy.types.Context):
+        for idx, child in enumerate(self.child_elements):
+            if idx != 0:
+                child.inactive = not child.inactive
+                child.setDefaultValue(context)
+
+
+    def draw_on_panel(self, layout:UILayout, context:Context, panel:Panel) -> Any:
+        panel_layout = panel.layout.row()
+        op = panel_layout.operator(PopupOverrideOperator.bl_idname, text="Toggle Texture Map Thresholds")
+        uuid = get_uuid(self.path)
+        op.target_uuid = uuid
+
+        return super().draw_on_panel(layout, context, panel)
+
+    def setDefaultValue(self, context:Context) -> Any:
+        return super().setDefaultValue(context)
+
+    def getSettings(self) -> dict:
+        return super().getSettings()
+
+    def setValue(self, value:Any, context:Context) -> bool:
+        return super().setValue(value, context)
 
     def setDisabledExport(self):
         self.button_widget.setDisabled(not self.ignore_widget.isChecked())
@@ -433,24 +514,6 @@ class PopupOverrideElement(CompoundUIElement):
         self.stacked_widget.updateGeometry()
         self.stacked_widget.adjustSize()
 
-    def setHideElement(self, value: bool):
-        # the UI rules file takes priority
-        hidden_settings = ProcessorPlugin.ui_rules.get("hideSettings", [])
-        if "settingid" in self.schema and self.schema["settingid"] in hidden_settings:
-            value = True
-
-        self.setHidden(value)
-
-        # if we are changing the visibility to True, we need to hide non-chosen elements
-        if not value:
-            current_element = self.getCurrentUIElement()
-            for element in self.child_elements[1:]:
-                if element != current_element:
-                    element.setHidden(True)
-
-        # the button should only be displayed if one or more items of the dialog are visible
-        self.button_widget.setHidden(all(e.isHidden() for e in self.child_elements[1:]))
-
     def updateElement(self):
         self.stacked_widget.updateGeometry()
         self.stacked_widget.adjustSize()
@@ -463,8 +526,7 @@ def check_parents_drawn(parent_element:UIElement, parent_panel:bpy.types.Panel, 
     if parent_element:
         if parent_element.isToggleable():
             parent_elment_value = blend_scene_getattr(
-                context.scene, parent_element.settingid,
-                parent_element.type, parent_element.path)
+                context.scene, parent_element.path)
             if not getattr(*parent_elment_value):
                 return False # parent disabled
             else:
@@ -526,7 +588,7 @@ class GroupPanel(bpy.types.Panel):
             if self.parent_element:
                 if self.parent_element.isToggleable():
                     attr = blend_scene_getattr(
-                        context.scene, self.parent_element.settingid, "", self.parent_element.path)
+                        context.scene, self.parent_element.path)
                     self.layout.enabled = getattr(*attr)
                 if self.layout.enabled:
                     #parent object also needs to be enabled
@@ -544,11 +606,10 @@ class GroupPanel(bpy.types.Panel):
         if self.parent_element and self.parent_element.isToggleable():
             if self.parent_panel.parent_element and self.parent_panel.parent_element.isToggleable():
                 env, attr = blend_scene_getattr(
-                    context.scene, self.parent_panel.parent_element.settingid, "",
-                    self.parent_panel.parent_element.path)
+                    context.scene, self.parent_panel.parent_element.path)
                 self.layout.enabled = getattr(env, attr)
             env, attr = blend_scene_getattr(
-                context.scene, self.parent_element.settingid, "", self.parent_element.path)
+                context.scene, self.parent_element.path)
             self.layout.prop(env, attr, text="")
 
 class GroupWidget(CompoundUIElement):
@@ -569,7 +630,7 @@ class GroupWidget(CompoundUIElement):
         setattr(*self.get_env_uuid(context), bool(value))
 
     def get_env_uuid(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
-        return blend_scene_getattr(bpy.context.scene, self.settingid, self.type, self.path)
+        return blend_scene_getattr(bpy.context.scene, self.path)
 
     def updateElement(self):
         self.adjustSize()
@@ -604,13 +665,13 @@ class GroupWidget(CompoundUIElement):
 
     def getSettings(self) -> dict:
         out_settings = {}
-        if (getattr(*blend_scene_getattr(bpy.context.scene, self.settingid, self.type, self.path)) or
+        if (getattr(*blend_scene_getattr(bpy.context.scene, self.path)) or
             not self.isToggleable()):
             for e in self.child_elements:
                 if e.name and not e.ignoreSettingExport():
                     settings = e.getSettings()
                     if settings is not None:
-                        out_settings[e.name] = settings #TODO DONT CREATE ELEMENT IF NO CHILDREN
+                        out_settings[e.name] = settings
         else:
             return None
         return out_settings
@@ -632,7 +693,7 @@ class OneOfWidget(CompoundUIElement):
         if not self.isdrawn():
             return
 
-        prop_env, attribute = blend_scene_getattr(context.scene, self.settingid, self.type, self.path)
+        prop_env, attribute = blend_scene_getattr(context.scene, self.path)
         panel_layout = panel.layout.row()
         blend_create_prop(panel_layout, prop_env, attribute, self.title)
 
@@ -646,7 +707,7 @@ class OneOfWidget(CompoundUIElement):
             child.setDisabled(not self.ignore_widget.isChecked())
 
     def get_env_uuid(self, context:bpy.types.Context=None) -> tuple[Any, Any]:
-        return blend_scene_getattr(bpy.context.scene, self.settingid, self.type, self.path)
+        return blend_scene_getattr(bpy.context.scene, self.path)
 
     def setDefaultValue(self, context:bpy.types.Context):
         # for oneofs, we reset to the first element
@@ -661,7 +722,7 @@ class OneOfWidget(CompoundUIElement):
     #get settingid of selected child
     def getCurrentUIElement(self) -> str:
         attribute_env, attribute = blend_scene_getattr(
-            bpy.context.scene, self.settingid, self.type, self.path)
+            bpy.context.scene, self.path)
         return getattr(attribute_env, attribute)
 
     def setCurrentUIElement(self, element_title: str):
@@ -675,16 +736,6 @@ class OneOfWidget(CompoundUIElement):
         self.stacked_widget.setCurrentIndex(self.dropdown_widget.currentIndex())
         h = self.stacked_widget.currentWidget().sizeHint().height()
         self.stacked_widget.setFixedHeight(h)
-
-    def setHideElement(self, value: bool):
-        self.setHidden(value)
-
-        # if we are changing the visibility to True, we need to hide non-chosen elements
-        if not value:
-            current_element = self.getCurrentUIElement()
-            for element in self.child_elements:
-                if element != current_element:
-                    element.setHidden(True)
 
     def createChildElements(self):
         """
@@ -746,7 +797,7 @@ class OneOfWidget(CompoundUIElement):
             oneof_path = self.path.copy()
             oneof_path.append("Oneof")
             attribute_env, attribute = blend_scene_getattr(
-                bpy.context.scene, self.settingid, self.type, oneof_path)
+                bpy.context.scene, oneof_path)
             #find the correct enum:
             possible_enums = bpy.context.scene.bl_rna.properties[str(attribute)].enum_items
             for enum in possible_enums:
@@ -832,7 +883,7 @@ class TabElement(CompoundUIElement):
         return out_settings
 
 clss = [
-    TabElementOperator, SimpleContainerOperator
+    TabElementOperator, SimpleContainerOperator, PopupOverrideOperator
 ]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
