@@ -4,49 +4,57 @@
     "ui_prio_hints" : { "Substance" : -1, "Maya" : 7, "3ds Max" : 7, "blender" : 7, "UnrealEngine" : 7 },
     "name"        : "Remesh and Bake Atlas",
     "button_name" : "Remesh and Bake Atlas",
-    "read_more" : "https://docs.rapidpipeline.com/",
+    "read_more" : "https://docs.rapidpipeline.com/docs/componentDocs/actions/3d-processor-actions#--remesh-and-bake-atlas",
     "explanation_long" : "Remeshes to a lower face count, creates a UV atlas and bakes material properties such as color, normals, and occlusion into textures. This improves performance for real-time assets in games or XR.",    
     "explanation" : "Remeshes to a lower face count, creates a UV atlas and bakes material properties such as color, normals, and occlusion into textures. This improves performance for real-time assets in games or XR.",
     "exposed_options" : [
         {
             "name": "Texture Baking Resolution",
-            "description" : "Resolution for baking textures. Default is 4096x4096 pixels. Values are always rounded up to the next higher powers-of-two resolution. <br/>Non-square dimensions may be generated, when beneficial, if 'Texture Resolution Auto Scaling' is enabled.",
+            "description" : "Resolution for baking textures.",
+            "description_long" : "Resolution for baking textures. Default is 4096x4096 pixels. Values are always rounded up to the next higher powers-of-two resolution. <br/>Non-square dimensions may be generated, when beneficial, if 'Texture Resolution Auto Scaling' is enabled.",
             "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.bakingResolution.default"
         },
         {
             "name": "Bake Occlusion Map",
-            "description" : "Bakes an ambient occlusion texture. <br/>If 'Preserve Tiling' is enabled, then a 2nd UV is generated using an 'atlas' layout and the occlusion is baked into it. <br/>If 'Preserve Tiling' is disabled, the first UV is re-generated using an 'atlas' layout and the occlusion is baked into it.",
+            "description" : "Bakes an ambient occlusion texture, either into a new 2nd UV, or by converting UVs into an atlas layout.",
+            "description_long" : "Bakes an ambient occlusion texture. <br/>If 'Preserve Tiling' is enabled, then a 2nd UV is generated using an 'atlas' layout and the occlusion is baked into it. <br/>If 'Preserve Tiling' is disabled, the first UV is re-generated using an 'atlas' layout and the occlusion is baked into it.",
             "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.aoBaker",
             "toggled": false
         },
         {
             "name": "Texture Resolution Auto Scaling",
-            "description" : "When enabled the value for 'Texture Baking Resolution' is used for the largest atlas in terms of occupied 3D surface. Materials on smaller meshes will use smaller power of 2 resolutions, according to their size in 3D space. <br/>When disabled, all atlases will use the same texture resolution, as set by the 'Texture Baking Resolution' parameter.",
+            "description" : "When enabled the value for 'Texture Baking Resolution' is used for the largest atlas in terms of occupied 3D surface.",
+            "description_long" : "When enabled the value for 'Texture Baking Resolution' is used for the largest atlas in terms of occupied 3D surface. Materials on smaller meshes will use smaller power of 2 resolutions, according to their size in 3D space. <br/>When disabled, all atlases will use the same texture resolution, as set by the 'Texture Baking Resolution' parameter.",
             "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.texMapAutoScaling"
         },
         {
             "name": "Face Target",
-            "description" : "The target amount of faces (triangles), default is 50,000 triangles. RapidPipeline will attempt to get as close as possible to the chosen value, though sometimes a mesh may require a slightly different final triangle count to preserve surface continuity.",
+            "description" : "The target amount of faces (triangles), default is 50,000 triangles.",
+            "description_long" : "The target amount of faces (triangles), default is 50,000 triangles. RapidPipeline will attempt to get as close as possible to the chosen value, though sometimes a mesh may require a slightly different final triangle count to preserve surface continuity.",
             "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.target.faces.value"
         },
         {
             "name": "Remeshing Resolution",
-            "description" : "The initial (re)meshed resolution before any face target is applied. Higher resolutions (max 11) preserve more holes, while lower resolutions (e.g. 6) close more holes. <br/>Where holes are covered by the new remeshed surface, an Alpha texture is baked to represent where the holes used to be on the original input surface.",
+            "description" : "The initial (re)meshed resolution before any face target is applied. Higher resolutions (max 11) preserve more holes, while lower resolutions (e.g. 6) close more holes.",
+            "description_long" : "The initial (re)meshed resolution before any face target is applied. Higher resolutions (max 11) preserve more holes, while lower resolutions (e.g. 6) close more holes. <br/>Where holes are covered by the new remeshed surface, an Alpha texture is baked to represent where the holes used to be on the original input surface.",
             "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.resolution"
         },
         {
             "name": "Remeshing Mode",
-            "description" : "Decides if remeshing creates one mesh, separate meshes, or according to a method. <br/>***none***: Each input mesh is remeshed independently. <br/>***full***: All input meshes are remeshed together into a single new mesh node. <br/>***byOpacity***: Non-transparent meshes are remeshed together into a single mesh, and each transparent mesh is remeshed independently. Transparent meshes are not combined together, because often this improves depth sorting in real-time rendering. <br/>***byMaterial***: Meshes using the same material will be remeshed together. This can change the number of meshes, but will keep the same number of materials as the input. <br/>***auto***: Let RapidPipeline decide. At the moment, this is the same as using *byOpacity*.",
+            "description" : "Decides if remeshing creates one mesh, separate meshes, or according to a method.",
+            "description_long" : "Decides if remeshing creates one mesh, separate meshes, or according to a method. <br/>***none***: Each input mesh is remeshed independently. <br/>***full***: All input meshes are remeshed together into a single new mesh node. <br/>***byOpacity***: Non-transparent meshes are remeshed together into a single mesh, and each transparent mesh is remeshed independently. Transparent meshes are not combined together, because often this improves depth sorting in real-time rendering. <br/>***byMaterial***: Meshes using the same material will be remeshed together. This can change the number of meshes, but will keep the same number of materials as the input. <br/>***auto***: Let RapidPipeline decide. At the moment, this is the same as using *byOpacity*.",
             "path": "sceneGraphFlattening.method"
         },
         {
             "name": "Atlas Mode",
-            "description" : "How many UV atlases are created. <br/>***single***: Create a single atlas for the whole asset. <br/>***separateAlpha***: Create two atlases, one for parts using alpha, and the other without alpha. This reduces texture file size because non-transparent materials don't need an alpha channel. <br/>***separateNormals***: Create two atlases, one for textured parts, the other for un-textured parts. This allows the un-textured input materials to have normal maps baked for them, without baking any other PBR textures. <br/>***separateAlphaNormals***: This combines the features of both *separateAlpha* and *separateNormals*. <br/>***separateMaterials***: Create one atlas for each input material. <br/>The *Atlas Mode* works in conjunction with *Mesh and Material Merging*. Merging is performed first, then the atlases are generated. These two settings determine how many mesh nodes and materials will be created in the output.",
+            "description" : "How many materials are created, each with its own UV atlas and set of PBR textures (color, normal, etc.).",
+            "description_long" : "How many materials are created, each with its own UV atlas and set of PBR textures (color, normal, etc.). <br/>***single***: Create a single atlas for the whole asset. <br/>***separateAlpha***: Create two atlases, one for parts using alpha, and the other without alpha. This reduces texture file size because non-transparent materials don't need an alpha channel. <br/>***separateNormals***: Create two atlases, one for textured parts, the other for un-textured parts. This allows the un-textured input materials to have normal maps baked for them, without baking any other PBR textures. <br/>***separateAlphaNormals***: This combines the features of both *separateAlpha* and *separateNormals*. <br/>***separateMaterials***: Create one atlas for each input material. <br/>The *Atlas Mode* works in conjunction with *Mesh and Material Merging*. Merging is performed first, then the atlases are generated. These two settings determine how many mesh nodes and materials will be created in the output.",
             "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.atlasMode"
         },
         {
             "name": "Multiple Atlas Factor",
-            "description" : "Increases the number of texture sets. Each material atlas is divided by this value, so a value of 2 means each atlas becomes two atlases. <br/>This can help improve texture resolution in the output. This can be paired with a lower value for *Texture Baking Resolution* as a good alternative to using fewer atlases with a higher texture resolution (e.g. two 2048s vs. one 4096).",
+            "description" : "Increases the number of texture sets.",
+            "description_long" : "Increases the number of texture sets. Each material atlas is divided by this value, so a value of 2 means each atlas becomes two atlases. <br/>This can help improve texture resolution in the output. This can be paired with a lower value for *Texture Baking Resolution* as a good alternative to using fewer atlases with a higher texture resolution (e.g. two 2048s vs. one 4096).",
             "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.atlasFactor"
         }
     ]

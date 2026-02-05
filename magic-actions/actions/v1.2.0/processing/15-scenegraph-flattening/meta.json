@@ -1,0 +1,30 @@
+{
+    "uid"         : "MA2025052915",
+    "min_engine_version" : [7,4,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 2, "3ds Max" : 2, "blender" : 2, "UnrealEngine" : 2 },
+    "name"        : "Scene Graph Flattening",
+    "button_name" : "Scene Graph Flattening",
+    "read_more" : "https://docs.rapidpipeline.com/docs/componentDocs/actions/3d-processor-actions#--scene-graph-flattening",
+    "explanation_long" : "Scene Graph Flattening settings allow nodes to be combined according to various properties. Material merging is automatically handled when nodes are flattened, depending on the method.",
+    "explanation" : "Scene Graph Flattening settings allow nodes to be combined according to various properties.",
+    "exposed_options" : [
+        {
+            "name": "Flattening Method",
+            "description" : "Methods for controlling how nodes are combined. By Opacity, auto and full will also flatten materials.",
+            "description_long" : "Methods for controlling how nodes are combined. By Opacity, auto and full will also flatten materials. <br/><ul><li>none: This mode produces the highest number of drawcalls, but preserves all nodes.</li><li>full: Everything is merged. Will also result in one single material node.</li><li>byOpacity: Merges all non-transparent meshes and keeps all transparent meshes separate. Will result in 1 - n material nodes (dependant on number of transparent nodes).</li><li>byMaterial: Merges all meshes that share the same material ID. Will result in the same number of material nodes as in the input.</li><li>auto: Let RapidPipeline decide. At this moment this is equal to the flattening mode *byOpacity*.</li></ul><br/><br/>Note that some formats (e.g. OBJ) do not support hierarchies or instances, in which case our exporters do their best to at least keep individual meshes separate.",
+            "path": "sceneGraphFlattening.method"
+        },
+        {
+            "name": "Preserve Scene Depth Level",
+            "description" : "Number of levels in the scene structure that should not be flattened. The higher the number the more levels are preserved.",
+            "description_long" : "Number of levels in the scene structure that should not be flattened. The higher the number the more levels are preserved. <br/><br/>Zero (default) will not preserve any hierarchy; the resulting number of mesh nodes will depend on the input materials and the chosen Flattening Method.",
+            "path": "sceneGraphFlattening.preservedSceneDepth"
+        },
+        {
+            "name": "Multi-Material Split Mode",
+            "description" : "Multi-material meshes can be split to new separate meshes per material.",
+            "description_long" : "Multi-material meshes can be split apart, creating a separate mesh for each input material.<br/><ul><li>auto: Let RapidPipeline decide. At this moment this is equal to *byOpacity*.</li><li>none: No splits are created.</li><li>byOpacity: Splits multi-material meshes, keeps all transparent meshes separate, and merges all non-transparent meshes into a single mesh.</li><li>byMaterial: Splits multi-material meshes, into a single mesh per material.</li></ul><br/><br/>This process only affects meshes that have per-face material assignments. Vertex normals are not altered, smooth shading will be preserved across the new splits.",
+            "path": "3dEdit.modelEdit.splitMultiMaterialMeshes"
+        }
+   ]
+}

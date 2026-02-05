@@ -1,0 +1,56 @@
+{
+    "export": [
+    {
+      "fileName": "",
+      "preserveTextureFilenames": true,
+      "textureMapFilePrefix": "",
+      "reencodeTextures": "auto",
+      "discard": {
+        "unusedUVs": false,
+        "emptyNodes": false
+      },
+      "format": {
+        "gltf": {
+          "pbrMaterial": {
+            "maxTextureResolution": {
+              "default": 4096
+            },
+            "textureFormat": {
+              "default": "auto",
+              "normal": "auto"
+            },
+            "textureCompression": {
+              "jpeg": {
+                "quality": 90,
+                "qualityNormals": 95
+              },
+              "webp": {
+                "quality": 95,
+                "qualityNormals": 95
+              },
+              "ktx": {
+                "compressionSpeed": 2,
+                "quality": 128,
+                "uastcQuality": "default",
+                "mipmapCount": 2
+              }
+            },
+            "separateOcclusionMap": false,
+            "excludePbrExtensions": false,
+            "forceDoubleSidedMaterials": false,
+            "forceUnlitMaterials": false,
+            "convertMetalRoughness": false
+          },
+          "geometryCompression": "none",
+          "excludeTangents": true,
+          "draco": {
+            "positionQuantization": 14,
+            "normalQuantization": 10,
+            "uvQuantization": 12,
+            "boneWeightsQuantization": 12
+          }
+        }
+      }
+    }
+   ]
+  }

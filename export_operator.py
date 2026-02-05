@@ -72,8 +72,8 @@ class ExportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     def invoke(self, context, event):
         # select first export action
         for action in self.export_actions:
-            if self.filename_ext.split(".")[-1] in action.action_name:
-                bpy.ops.processor.magic_action_button(magic_action_str=action.action_name)
+            if self.filename_ext.split(".")[-1] == action.name.split("Export ")[-1]:
+                bpy.ops.processor.magic_action_button(magic_action_str=action.name)
                 return super().invoke(context, event)
         return super().invoke(context, event)
 
@@ -81,7 +81,7 @@ class ExportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     def cancel(self, context):
         # select first magic action
         magic_actions_sorted:list[MagicAction] = get_magic_actions()
-        first_magic_action = magic_actions_sorted[0].action_name
+        first_magic_action = magic_actions_sorted[0].name
         bpy.ops.processor.magic_action_button(magic_action_str=first_magic_action)
         return None
 
@@ -99,17 +99,18 @@ class ExportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         selected_magic_action = None
 
         for magic_action in self.export_actions:
-            if self.filename_ext.split(".")[-1] in magic_action.action_name:
+            if self.filename_ext.split(".")[-1] == magic_action.name.split("Export ")[-1]:
                 op:MagicActionOperator = button_layout.operator(
                     MagicActionOperator.bl_idname,
-                    text=magic_action.action_name,
+                    text=magic_action.name,
                     icon_value=getattr(
-                        context.scene, f"magic_action_{version}_{os.path.basename(magic_action.path)}").icon_id,
-                        depress=selected_magic_action_str == magic_action.action_name)
-                action_name = magic_action.action_name
+                        context.scene, f"magic_action_{version}_{magic_action.name}").icon_id,
+                        depress=selected_magic_action_str == magic_action.name)
+                action_name = magic_action.name
                 op.magic_action_str = action_name
 
                 selected_magic_action = magic_action
+                break
 
         if selected_magic_action_str:
             selection = selected_magic_action_str
@@ -120,7 +121,7 @@ class ExportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             magic_layout = main_magic_layout.row()
             magic_layout = main_magic_layout.row()
             if context.scene.rpde_enable_preview:
-                action_image_str = f"magic_action_image_{version}_{os.path.basename(magic_action.path)}"
+                action_image_str = f"magic_action_image_{version}_{selected_magic_action.name}"
                 if action_image_str in pcoll:
                     magic_layout.template_icon(icon_value=pcoll[
                         action_image_str].icon_id, scale=5.0)
@@ -133,7 +134,7 @@ class ExportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             if context.scene.rpde_enable_description:
                 #description of magic action
                 if selected_magic_action:
-                    prettyPrint(magic_layout, selected_magic_action.action_description, context)
+                    prettyPrint(magic_layout, selected_magic_action.description, context)
                 else:
                     magic_layout.label(text="Warning: Could not find Magic Action description")
             magic_layout = main_magic_layout.row()
@@ -154,7 +155,6 @@ class ExportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
                     sub = box_layout.row()
             else:
                 pass
-                #print(f"Warning, could not find options for MagicAction: {selected_magic_action.action_name}")
         else:
             magic_layout = main_magic_layout.row()
             warning_msg = "Please choose an action above"
@@ -214,6 +214,7 @@ class ExportCTM(bpy.types.Operator):
     bl_idname = "processor.export_ctm"
     bl_label = "Start Export"
     filetype = ".ctm"
+    bl_description = "Choose Export Format"
 
     def execute(self, context):
         return call_export_file_picker(self, context)
@@ -221,6 +222,7 @@ class ExportCTM(bpy.types.Operator):
 class ExportFBX(bpy.types.Operator):
     bl_idname = "processor.export_fbx"
     bl_label = "Start Export"
+    bl_description = "Choose Export Format"
     filetype = ".fbx"
     export_ext = filetype
 
@@ -230,6 +232,7 @@ class ExportFBX(bpy.types.Operator):
 class ExportGLB(bpy.types.Operator):
     bl_idname = "processor.export_glb"
     bl_label = "Start Export"
+    bl_description = "Choose Export Format"
     filetype = ".glb"
     export_ext = filetype
 
@@ -239,6 +242,7 @@ class ExportGLB(bpy.types.Operator):
 class ExportGLTF(bpy.types.Operator):
     bl_idname = "processor.export_gltf"
     bl_label = "Start Export"
+    bl_description = "Choose Export Format"
     filetype = ".glTF"
 
     def execute(self, context):
@@ -247,6 +251,7 @@ class ExportGLTF(bpy.types.Operator):
 class ExportOBJ(bpy.types.Operator):
     bl_idname = "processor.export_obj"
     bl_label = "Start Export"
+    bl_description = "Choose Export Format"
     filetype = ".obj"
 
     def execute(self, context):
@@ -255,6 +260,7 @@ class ExportOBJ(bpy.types.Operator):
 class ExportPLY(bpy.types.Operator):
     bl_idname = "processor.export_ply"
     bl_label = "Start Export"
+    bl_description = "Choose Export Format"
     filetype = ".ply"
 
     def execute(self, context):
@@ -263,6 +269,7 @@ class ExportPLY(bpy.types.Operator):
 class ExportSTL(bpy.types.Operator):
     bl_idname = "processor.export_stl"
     bl_label = "Start Export"
+    bl_description = "Choose Export Format"
     filetype = ".stl"
 
     def execute(self, context):
@@ -271,6 +278,7 @@ class ExportSTL(bpy.types.Operator):
 class ExportUSD(bpy.types.Operator):
     bl_idname = "processor.export_usd"
     bl_label = "Start Export"
+    bl_description = "Choose Export Format"
     filetype = ".usd"
 
     def execute(self, context):
@@ -279,6 +287,7 @@ class ExportUSD(bpy.types.Operator):
 class ExportUSDA(bpy.types.Operator):
     bl_idname = "processor.export_usda"
     bl_label = "Start Export"
+    bl_description = "Choose Export Format"
     filetype = ".usda"
 
     def execute(self, context):
@@ -287,6 +296,7 @@ class ExportUSDA(bpy.types.Operator):
 class ExportUSDC(bpy.types.Operator):
     bl_idname = "processor.export_usdc"
     bl_label = "Start Export"
+    bl_description = "Choose Export Format"
     filetype = ".usdc"
 
     def execute(self, context):
@@ -295,6 +305,7 @@ class ExportUSDC(bpy.types.Operator):
 class ExportUSDZ(bpy.types.Operator):
     bl_idname = "processor.export_usdz"
     bl_label = "Start Export"
+    bl_description = "Choose Export Format"
     filetype = ".usdz"
 
     def execute(self, context):

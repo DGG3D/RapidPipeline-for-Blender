@@ -41,7 +41,7 @@ os.environ["RPDP_PROCESSOR_DCC_DATA"] = os.path.join(base_dcc_data_folder, "Rapi
 
 from .compound_elements import OneOfWidget, get_ui_elements_dict
 from .gui_commons import SettingsValidator, UIElement, UserDialog
-from .json_utils import JSonUtils
+from .ProcessorPluginsCommon.magic_actions.utils import loadJSON, saveJSON
 from .scene_utils import get_uuid
 
 validator = SettingsValidator()
@@ -156,7 +156,7 @@ class LoadOperator(bpy.types.Operator):
             return
 
         # load settings file into dict
-        settings = JSonUtils.loadJSON(dialog_file)
+        settings = loadJSON(dialog_file)
 
         # discard non used parts of settings (eg. import and export)
         settings = discard_settings(settings, "import")
@@ -216,7 +216,7 @@ class SaveOperator(bpy.types.Operator):
         os.makedirs(os.path.dirname(dialog_file), exist_ok=True)
         if not str(dialog_file).endswith('.json'):
             dialog_file += '.json'
-        if not JSonUtils.saveJSON(settings_json, dialog_file):
+        if not saveJSON(settings_json, dialog_file):
             print(f"Settings file wasn't saved successfully: {dialog_file}.")
             confirm_label = "There was an error saving the settings file."
             if not UserDialog.errorRetry(self, "Error Saving Settings", confirm_label):

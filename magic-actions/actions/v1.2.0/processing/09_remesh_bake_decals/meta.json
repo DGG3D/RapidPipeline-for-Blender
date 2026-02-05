@@ -1,0 +1,30 @@
+{
+    "uid"         : "MA2025052909",
+    "min_engine_version" : [7,3,1],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 9, "3ds Max" : 9, "blender" : 9, "UnrealEngine" : 9 },
+    "name"        : "Remesh and Bake Decals",
+    "button_name" : "Remesh and Bake Decals",
+    "read_more" : "https://docs.rapidpipeline.com/docs/componentDocs/actions/3d-processor-actions#--remesh-and-bake-decals",
+    "explanation_long" : "Remeshes to a lower face count, flattens scene graph and merges materials, creates UVs and bakes decals (garment details, logos) and material properties. Improves performance for real-time, games, XR.",
+    "explanation" : "Remeshes to a lower face count, flattens scene graph and merges materials, creates UVs and bakes decals (garment details, logos) and material properties. Improves performance for real-time, games, XR.",
+    "exposed_options" : [
+        {
+            "name": "Texture Baking Resolution",
+            "description" : "Resolution for baking textures.",
+            "description_long" : "Resolution for baking textures. Default is 4096x4096 pixels. Values are always rounded up to the next higher powers-of-two resolution.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.materialMerger.materialRegenerator.uvAtlasGenerator.textureBaker.bakingResolution.default"
+        },
+        {
+            "name": "Face Target",
+            "description" : "The target amount of faces (triangles). Constraints such as normal, topology or UV preservation might result in higher face counts as initially specified.",
+            "description_long" : "The target amount of faces (triangles). Constraints such as normal, topology or UV preservation might result in higher face counts as initially specified.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.target.faces.value"
+        },
+        {
+            "name": "Remeshing Method",
+            "description" : "Voxelization creates backsides and mesh smoothing, better for multi-layered geometry (apparel). Shrinkwrap removes backsides and preserves the original shape, better suited for hard-surface models.",
+            "description_long" : "Voxelization creates backsides and mesh smoothing, better for multi-layered geometry (apparel). Shrinkwrap removes backsides and preserves the original shape, better suited for hard-surface models.",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.remesher.method"
+        }
+    ]
+}

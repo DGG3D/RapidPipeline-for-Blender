@@ -89,7 +89,7 @@ main_script_name = {
     "Maya": "RapidPipelineForMaya.py",
 }
 package_name = {
-    "3ds Max": "RapidPipelineForMax",
+    "3ds Max": "RapidPipelineFor3dsMax",
     "Maya": "RapidPipelineForMaya",
 }
 def add_RuntimeRequirements(parent:ET.Element, os:str, platform:str, series_min:str, series_max:str) -> ET.Element:
@@ -118,7 +118,7 @@ def add_mainScript(parent:ET.Element, os:str, platform:str, series_min:str, seri
         # AutoLoad and AutoLoadOnce are Maya specific
         component_entry = ET.SubElement(components, "ComponentEntry", ModuleName=f"./Contents/plugin/{main_script_name[platform]}")
         component_entry.attrib["AutoLoad"] = "True"
-        
+
         mayaEnv = ET.SubElement(components, "MayaEnv", expr="MAYA_PLUG_IN_PATH+:=plugin")
     else:
         component_entry = ET.SubElement(components, "ComponentEntry", ModuleName=f"./{main_script_name[platform]}")
@@ -167,16 +167,16 @@ def make_XML_package(product: str, version: str, output_folder:str):
 
 def copy_input_files(input_folder:str, rpde_folder:str, schema_file:str, output_folder:str, version:str):
     to_ignore = ["__pycache__", ".git", ".github", ".venv", "input", "output", ".gitignore",
-                 ".gitmodules", "temp_config.json", "temp_system.json", "rpd_temp_files", "settings_file.json", "action_cache.json", "__version__.py"]
+                 ".gitmodules", "temp_config.json", "temp_system.json", "rpd_temp_files", "settings_file.json", "action_cache.json", "__version__.py", ".vscode"]
     if rpde_folder:
         to_ignore.append("rpde")
     if schema_file:
         to_ignore.append("schema.json")
-    
+
     shutil.copytree(input_folder, output_folder, ignore=shutil.ignore_patterns(*to_ignore), dirs_exist_ok=True)
     if schema_file:
         shutil.copy(schema_file, output_folder)
-    
+
     # create __version__ file
     versionContent = '__version__ = "' + version + '"'
     with open(os.path.join(output_folder, "__version__.py"), "w") as f:
@@ -249,4 +249,4 @@ if __name__ == "__main__":
 
     make_XML_package(product, args.version, output_folder)
 
-    package_folder(hoops_build, args.output, os.path.join(os.path.dirname(args.output), f"{package_name[product]}_v{args.version}.zip"), args.note)
+    package_folder(hoops_build, args.output, os.path.join(os.path.dirname(args.output), f"{package_name[product]}_v{args.version}_Win.zip"), args.note)

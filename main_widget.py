@@ -28,12 +28,13 @@ process) for further information.
 """
 
 import os
+import pathlib
 import queue
 import subprocess
 import textwrap
 import webbrowser
 from sys import platform
-from typing import Any, List
+from typing import Any
 
 import bpy
 import bpy.utils.previews
@@ -53,19 +54,13 @@ from .basic_elements import (
     IntegerPropertyGroup,
     StringPropertyGroup,
 )
-from .compound_elements import GroupPanel, SimpleContainer, get_ui_elements_dict
 from .draw_ui import draw_main_panel, draw_processor_log, magic_actions_panel
 from .export_operator import ShowExportMenu
 from .gui_commons import ProcessorPlugin, UIElement
 from .import_operator import ImportFileOperator
 from .license_manager import ProcessorLicense
-from .progress_dialog import ProgressDialog
-from .scene_utils import (
-    blend_scene_init_setattr,
-    blend_scene_setattr_enum,
-    get_uuid,
-    set_uuid,
-)
+from .main import MainData
+from .scene_utils import get_uuid
 from .settings_operator import (
     CancelProcessorOperator,
     DefaultsOperator,
@@ -136,7 +131,6 @@ class HelpOperator(Operator):
         bpy.types.Scene.rpde_draw_ui = not context.scene.rpde_help
         bpy.types.Scene.rpde_settings = False
         bpy.context.scene.aboutdialog = False
-#        self.helpLink()
         return {'FINISHED'}
 
 class DocLinkOperator(Operator):
@@ -165,20 +159,10 @@ class ContactSupportOperator(Operator):
     bl_label = "support"
     bl_options = {'REGISTER', 'UNDO'}
 
+    main_data = MainData()
+
     def execute(self, context:Context) -> set[str]:
-        """
-        Callback to open Crisp support chat window, using user's e-mail if available.
-        """
-
-        support_url = "https://go.crisp.chat/chat/embed/?website_id=922e6bf3-2bf5-48d4-ba89-5bd58ef411e1"
-
-        # get user's email address from token if available
-        user_email = ProcessorLicense.getUserEmail()
-        if user_email:
-            user_email.replace("@", "%40")
-            support_url += f"&user_email={user_email}"
-
-        webbrowser.open(support_url)
+        self.main_data.onSupportPressed()
         return {'FINISHED'}
 
 class RPDEPanel (Panel):
@@ -224,9 +208,6 @@ class MainPanel(Panel):
     was_successful: bool = False
     was_cancelled: bool = False
 
-
-    # variables for progress
-    progress_dialog: ProgressDialog = None
 
     def draw_header(self, context:Context):
         pcoll = preview_collections["main"]
@@ -369,53 +350,6 @@ def prettyPrint(panel:Panel, text:str, context:Context):
         for chunk in textwrap.wrap(line, width=max_label_width):
             panel.layout.label(text=chunk)
 
-def create_subpanel(path:List[str], parent_panel:str, schema:dict, display_header:bool) -> GroupPanel:
-    set_uuid(set(path))
-    id = f"VIEW3D_PT_Subpanel{get_uuid(path).replace('-', '')}"
-    header = {'HIDE_HEADER'} if not display_header else set()
-    if id:
-        if not hasattr(bpy.types, id):
-            new_panel = type(id,
-                (GroupPanel, Panel, ),
-                {"bl_idname" : id, "bl_label" : schema.get("title", ""),
-                    "bl_parent_id": parent_panel, "UI_elements": [],
-                    "bl_options": header})
-            if not hasattr(bpy.types, new_panel.bl_idname):
-                bpy.utils.register_class(new_panel)
-            return new_panel
-        else:
-            return getattr(bpy.types, id)
-    return None
-
-def add_ui_element_to_panel(path:List[str], panel:GroupPanel):
-    if panel.bl_idname != "VIEW3D_PT_RapidPipeline":
-        try:
-            ui_element:UIElement = get_ui_elements_dict()[get_uuid(path)]
-        except Exception:
-            ui_element:UIElement = None
-        if ui_element:
-            if not isinstance(ui_element, SimpleContainer):
-                panel.UI_elements.append(ui_element)
-                ui_element.panel = panel
-
-def add_parent_to_panel(in_path:List[str], panel:GroupPanel, schema_key:str):
-    if schema_key:
-        path = in_path.copy()
-        try:
-            ui_element:UIElement = get_ui_elements_dict()[get_uuid(path)]
-        except Exception:
-            import traceback
-            traceback.print_stack()
-            traceback.print_exc()
-
-            print("Error could not find ui element to add to panel")
-            ui_element:UIElement = None
-        if ui_element:
-            panel.parent_element = ui_element
-    else:
-        print("Error: could not find schema key for adding parent to panel")
-        print(f"For Path: {in_path} and panel: {panel.bl_label}")
-
 # gets a dict of all descriptions of magic action options to be used in setup_proerties
 def get_magic_descriptions() -> dict:
     from .magic_actions_operator import get_all_actions
@@ -427,169 +361,6 @@ def get_magic_descriptions() -> dict:
             options_descriptions_dict[get_uuid(option.option_path)] = option.option_description
 
     return options_descriptions_dict
-
-def setup_properties(schema: dict,
-                     parent: dict = None,
-                     path: List[str] = [],
-                     schema_key:str = "",
-                     parent_panel:str = "",
-                     magic_descriptions_dict:dict = {}):
-
-    def get_description() -> str:
-        if get_uuid(path) in magic_descriptions_dict:
-            return magic_descriptions_dict[get_uuid(path)]
-        else:
-            return schema.get("description", "")
-
-    if isinstance(parent, dict) and parent.get('settingid', None) is not None:
-        if schema_key:
-            path.append(schema_key)
-
-    if not parent_panel:
-        parent_panel = create_subpanel(path, MainPanel.bl_idname, schema, display_header=False)
-    temp_path = path.copy()
-    attribute_id = schema.get("settingid", "settingid_not_found")
-
-    for key in schema.keys():
-        if key == 'properties':
-            for sub_schema in schema['properties'].keys():
-                if isinstance(schema['properties'][sub_schema], dict):
-                    if parent and path:
-                        parent_panel = create_subpanel(path.copy(), parent_panel.bl_idname, schema, display_header=True)
-                        add_parent_to_panel(path.copy(), parent_panel, sub_schema)
-                    setup_properties(schema=schema['properties'][sub_schema],
-                                        parent=schema.copy(), path=path.copy(),
-                                        schema_key=sub_schema, parent_panel=parent_panel,
-                                        magic_descriptions_dict=magic_descriptions_dict)
-
-        if not schema_key:
-            continue
-
-        #case only for export
-        if key == "items" and attribute_id == "exportArray":
-            setup_properties(schema["items"], parent, path, schema_key,
-                             parent_panel, magic_descriptions_dict=magic_descriptions_dict)
-
-        if key == 'type':
-            if schema['type'] == 'boolean':
-                blend_scene_init_setattr(
-                    bpy.types.Scene, attribute_id, path=path,
-                    value_function=bpy.props.BoolProperty(
-                        name="", default=schema['default'], description=get_description()),
-                    toggable=('toggleable' in schema))
-                add_ui_element_to_panel(path, parent_panel)
-            if schema['type'] == 'integer':
-                blend_scene_init_setattr(
-                    bpy.types.Scene, attribute_id, path=path,
-                    value_function=bpy.props.IntProperty(
-                        name="", default=schema['default'], min=schema.get('minimum', 0.0),
-                        max=schema.get('maximum', 100_000_000), description=get_description()),
-                    toggable=('toggleable' in schema))
-                add_ui_element_to_panel(path, parent_panel)
-            if schema['type'] == 'string':
-                blend_scene_init_setattr(
-                    bpy.types.Scene, attribute_id, path=path,
-                    value_function=bpy.props.StringProperty(
-                        name="", default=schema.get('default', ""), description=get_description()),
-                    toggable=('toggleable' in schema))
-                add_ui_element_to_panel(path, parent_panel)
-            if schema['type'] == 'object':
-                blend_scene_init_setattr(
-                    bpy.types.Scene, attribute_id, path=path,
-                    value_function=bpy.props.BoolProperty(name="", default=False, description=get_description()),
-                    toggable=('toggleable' in schema))
-                add_ui_element_to_panel(path, parent_panel)
-
-            if schema['type'] == 'number':
-                if 'percentage' in parent:
-                        blend_scene_init_setattr(
-                            bpy.types.Scene, attribute_id, path=path,
-                            value_function=
-                                bpy.props.FloatProperty(
-                                    name="",
-                                    min=schema['minimum'],
-                                    max=schema['maximum'],
-                                    default=schema['default'],
-                                    subtype='PERCENTAGE',
-                                    description=get_description()),
-                                    value=schema['default'],
-                                    toggable=('toggleable' in schema),
-                                    precision=3
-                                    )
-                        add_ui_element_to_panel(path, parent_panel)
-                else:
-                    if 'maximum' in schema:
-                        value_function = bpy.props.FloatProperty(
-                                name="",
-                                min=schema.get('minimum', 0.0), max=schema['maximum'],
-                                default=schema.get('default', 0.0), description=get_description(),
-                                precision=3)
-                    else:
-                        value_function = bpy.props.FloatProperty(
-                                    name="",
-                                    min=schema.get('minimum', 0.0), default=schema.get('default', 0.0),
-                                    description=get_description(),
-                                    precision=3)
-                    blend_scene_init_setattr(
-                        bpy.types.Scene, attribute_id, path=path,
-                        value_function=value_function,
-                        toggable=('toggleable' in schema))
-                    add_ui_element_to_panel(path, parent_panel)
-
-            if schema['type'] == 'array' and 'default' in schema:
-                blend_scene_init_setattr(
-                    bpy.types.Scene, attribute_id, path=path,
-                    value_function=bpy.props.FloatVectorProperty(
-                        name="",
-                        default = (schema['default'][:3]), min=0.0, max=1.0, subtype='COLOR',
-                        description=get_description()), toggable=('toggleable' in schema))
-                add_ui_element_to_panel(path, parent_panel)
-
-        if key == 'enum':
-            enum_options = []
-            for element in schema['enum']:
-                enum_options.append((element,)*3)
-            blend_scene_setattr_enum(bpy.types.Scene,
-                    property=bpy.props.EnumProperty(name="", items=enum_options, description=get_description()),
-                    path=path)
-            add_ui_element_to_panel(path, parent_panel)
-
-        if key == 'oneOf':
-            #create panel for oneofs (needed for modifier tab)
-            if list(schema.keys())[0] == "oneOf":
-                sub_schema = list(schema.keys())[0]
-                if parent and path:
-                    parent_panel = create_subpanel(path.copy(), parent_panel.bl_idname, schema, display_header=True)
-                    add_parent_to_panel(path.copy(), parent_panel, sub_schema)
-
-            oneof_elements = []
-            for oneof_sub_schema in schema['oneOf']:
-                oneof_elements.append((oneof_sub_schema.get('settingid', ''),
-                                        oneof_sub_schema.get('title', ''),
-                                        oneof_sub_schema.get('description', '')))
-            #TODO: we need to draw the child objects of oneof
-            #however they dont have a different path and they dont appear in the settings
-            #this would be the emptyCompoundUIElement
-            #so we need to draw the children of the correct empty comound ui element
-            path_oneof = path.copy()
-            path_oneof.append("Oneof")
-            blend_scene_setattr_enum(bpy.types.Scene,
-                    property=bpy.props.EnumProperty(name="", items=oneof_elements, description=get_description()),
-                    path=path_oneof)
-            add_ui_element_to_panel(path_oneof, parent_panel)
-
-            path_tmp = path.copy()
-            for oneof_sub_schema in schema['oneOf']:
-                if isinstance(oneof_sub_schema, dict):
-                    setup_properties(schema=oneof_sub_schema,
-                                        parent=schema.copy(),
-                                        path=path_tmp, schema_key= None,
-                                        parent_panel=parent_panel,
-                                        magic_descriptions_dict=magic_descriptions_dict)
-                path=path_tmp
-
-        path= temp_path
-
 
 
 def setup_icons():
@@ -622,7 +393,7 @@ def setup_icons():
     for file, file_names in icons_dict.items():
         common_icon_found = False
         for file_name in file_names:
-            commons_icon_dir = os.path.join(dirname, '3DProcessorPluginsCommon', 'assets', 'icons', file_name)
+            commons_icon_dir = os.path.join(dirname, 'ProcessorPluginsCommon', 'assets', 'icons', file_name)
             if os.path.isfile(commons_icon_dir):
                 pcoll.load(file, commons_icon_dir, 'IMAGE')
                 common_icon_found = True
@@ -635,22 +406,15 @@ def setup_icons():
                     pcoll.load(file, resources_dir, 'IMAGE')
                     break
 
-    magic_action_path = os.path.join(dirname, 'magic-actions', 'actions')
-    if os.path.isdir(os.path.join(magic_action_path)):
-        for version in os.listdir(magic_action_path):
-            if version != "Custom":
-                for type in ('import', 'processing', 'export'):
-                    magic_action_folder = os.path.join(magic_action_path, version, type)
-                    if os.path.isdir(magic_action_folder):
-                        for magic_action in os.listdir(magic_action_folder):
-                            if os.path.isdir(os.path.join(magic_action_folder, magic_action)):
-                                icon_dir = os.path.join(magic_action_folder, magic_action, 'icon-dark.svg')
-                                image_dir = os.path.join(magic_action_folder, magic_action, "image.png")
-                                pcoll.load(f"magic_action_{version}_{magic_action}", icon_dir, 'IMAGE')
-                                if os.path.isfile(image_dir):
-                                    pcoll.load(f"magic_action_image_{version}_{magic_action}", image_dir, 'IMAGE')
-                                setattr(bpy.types.Scene, f"magic_action_{version}_{magic_action}",
-                                        pcoll[f"magic_action_{version}_{magic_action}"])
+    from .magic_actions_operator import get_all_actions
+    magic_actions = get_all_actions()
+    for magic_action in magic_actions:
+        pcoll.load(f"magic_action_{magic_action.version}_{magic_action.name}", magic_action.icon_dark_path, 'IMAGE')
+        if os.path.isfile(magic_action.gif_path):
+            pcoll.load(f"magic_action_image_{magic_action.version}_{magic_action.name}", magic_action.gif_path, 'IMAGE')
+        setattr(bpy.types.Scene, f"magic_action_{magic_action.version}_{magic_action.name}",
+                pcoll[f"magic_action_{magic_action.version}_{magic_action.name}"])
+    change_magic_action_version(None, None)
 
     preview_collections["main"] = pcoll
 
@@ -678,12 +442,13 @@ def register():
     # load_post is only called on blender startup
     # timers.register is used in case the plugin is installed without a blender restart
     # we can not rely only on timers.register since it doesnt work on loading blender scenes
-    global register_worked
-    register_worked = False
+    global register_flag
+    register_flag = False
+    from .setup_properties import setup_properties
     def wait_for_late_register(dummy = None):  # noqa: ANN001
-        global register_worked
-        if not register_worked:
-            register_worked = True
+        global register_flag
+        if not register_flag:
+            register_flag = True
             magic_descriptions_dict = get_magic_descriptions()
             setup_properties(schema, path=[], magic_descriptions_dict=magic_descriptions_dict)
 
@@ -692,12 +457,61 @@ def register():
 
     setup_icons()
 
+    setup_blender_properties()
+
+    # load_post is only called on blender startup
+    # timers.register is used in case the plugin is installed without a blender restart
+    # we can not rely only on timers.register since it doesnt work on loading blender scenes
+    global late_registered
+    late_registered = False
+    def wait_for_late_register(dummy = None):  # noqa: ANN001
+        global late_registered
+        if not late_registered:
+            late_registered = True
+            late_reg()
+            # save Addon to userpref to activate directly
+            bpy.ops.wm.save_userpref()
+            reset_magic_actions()
+
+    bpy.app.timers.register(wait_for_late_register, first_interval=0.2)
+    bpy.app.handlers.load_post.append(wait_for_late_register)  #wait for context to be fully loaded
+
+    if 'darwin' == platform:
+        print("Mac detected")
+        removeQuarantineFlagOnMac()
+    elif 'linux' == platform:
+        main_data = MainData()
+        main_data.setupUnixExecutable(ProcessorPlugin.getRPDEPath())
+    elif 'win32' == platform:
+        rpde_path = os.path.join(os.path.dirname(__file__), "rpde")
+        plugins_path = str(pathlib.Path(rpde_path).parent / "usd")
+        os.environ["RPD_USD_PLUGINS"] = plugins_path
+        hoops_path = str(pathlib.Path(rpde_path).parent / "hoops")
+        os.environ["RPD_HOOPS_DIR"] = hoops_path
+
+def change_magic_action_version(self:Any, context:Context=None):
+    from .draw_ui import change_drawn_version
+    from .magic_actions_operator import get_version, set_version
+    if not context:
+        version = get_version()
+    else:
+        version = context.scene.magic_action_versions
+    set_version(version)
+    change_drawn_version(version)
+
+def reset_magic_actions():
+    # press first magic_action_button in ui
+    from .magic_actions_operator import MagicAction, get_magic_actions
+    magic_actions_sorted:list[MagicAction] = get_magic_actions()
+    first_magic_action = magic_actions_sorted[0].name
+    bpy.ops.processor.magic_action_button(magic_action_str=first_magic_action)
+
+def setup_blender_properties():
     #setup tab elements
     tab_elements = []
     override_rules = ProcessorPlugin.ui_rules.get("overrideUIElement", {})
     for element in override_rules.get("SimpleContainer", []):
         tab_elements.append((element, element, "description"))
-
     bpy.types.Scene.tabelements = bpy.props.EnumProperty(items=tab_elements)
 
     bpy.types.Scene.aboutdialog = bpy.props.BoolProperty(default=False)
@@ -712,7 +526,7 @@ def register():
         default=0, min=0, max=100, step=1, subtype='PERCENTAGE', options={'SKIP_SAVE'})
     bpy.types.Scene.has_license = ProcessorLicense.performLicenseCheck(None)
     bpy.types.Scene.use_token_future_sessions = bpy.props.BoolProperty(
-        default=False,
+        default=True,
         description="If checked, the current Authentication Token will be saved to disk for future usage.")
     bpy.types.Scene.t_and_c_agreed = bpy.props.BoolProperty(
         default=False,
@@ -746,66 +560,12 @@ def register():
             items=versions,
             default=versions[-1][0],
             update=change_magic_action_version
-        )
-
-    # load_post is only called on blender startup
-    # timers.register is used in case the plugin is installed without a blender restart
-    # we can not rely only on timers.register since it doesnt work on loading blender scenes
-    global late_registered
-    late_registered = False
-    def wait_for_late_register(dummy = None):  # noqa: ANN001
-        global late_registered
-        if not late_registered:
-            late_registered = True
-            late_reg()
-            # save Addon to userpref to activate directly
-            bpy.ops.wm.save_userpref()
-            reset_magic_actions()
-
-    bpy.app.timers.register(wait_for_late_register, first_interval=0.2)
-    bpy.app.handlers.load_post.append(wait_for_late_register)  #wait for context to be fully loaded
-
-    if 'darwin' == platform:
-        print("Mac detected")
-        removeQuarantineFlagOnMac()
-    elif 'linux' == platform:
-        setupLinux()
-
-def change_magic_action_version(self:Any, context:Context):
-    from .draw_ui import change_drawn_version
-    from .magic_actions_operator import set_version
-    set_version(context.scene.magic_action_versions)
-    change_drawn_version(context.scene.magic_action_versions)
-
-def reset_magic_actions():
-    # press first magic_action_button in ui
-    from .magic_actions_operator import MagicAction, get_magic_actions
-    magic_actions_sorted:list[MagicAction] = get_magic_actions()
-    first_magic_action = magic_actions_sorted[0].action_name
-    bpy.ops.processor.magic_action_button(magic_action_str=first_magic_action)
+    )
 
 def removeQuarantineFlagOnMac():
-    os.chdir(os.path.dirname(ProcessorPlugin.getRPDEPath()))
-    command_arguments = ['xattr', '-d', 'com.apple.quarantine', "./rpde"]
-    command_arguments2 = ['chmod', '+x', "./rpde"]
-    print("Removing quarantine flag on Mac...")
-    print(command_arguments)
-
-    _ = subprocess.run(
-            command_arguments2)
-
-    result = subprocess.run(
-            command_arguments)
-
-    print(f"Subprocess result: {result}")
-
-def setupLinux():
-    os.chdir(os.path.dirname(ProcessorPlugin.getRPDEPath()))
-    command_arguments = ['chmod', '+x', "./rpde"]
-    result = subprocess.run(
-            command_arguments)
-
-    print(f"Subprocess result: {result}")
+    main_data = MainData()
+    path = ProcessorPlugin.getRPDEPath()
+    return main_data.removeQuarantineFlagOnMac(path)
 
 def unregister():
     unreg()

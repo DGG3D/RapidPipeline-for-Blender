@@ -1,7 +1,12 @@
 import re
 from typing import List, Callable
 import pathlib
-from PySide6 import QtCore
+try:
+    from PySide6 import QtCore
+    PYSIDE_VERSION = 6
+except ImportError:
+    from PySide2 import QtCore
+    PYSIDE_VERSION = 2
 
 from sys import platform
 

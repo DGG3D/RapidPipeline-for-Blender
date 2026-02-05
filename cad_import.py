@@ -33,7 +33,7 @@ from typing import Any
 import bpy  # type: ignore
 import bpy_extras  # type: ignore
 
-from .json_utils import JSonUtils
+from .ProcessorPluginsCommon.magic_actions.utils import loadJSON, saveJSON
 from .run_rpde import RunPipeline
 
 cad_output_path = os.path.join(os.environ["RPDP_PROCESSOR_DCC_DATA"], "CAD_import")
@@ -96,7 +96,7 @@ class CADImportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ImportHelper
         # writing cad import settings based on selected tessellation resolution:
         cad_import_path = os.path.join(os.path.dirname(__file__), 'resources', "CAD_import")
         rpde_settings = os.path.join(cad_import_path, "rpdp_dcc_plugin_cad_settings.json")
-        cad_settings_json = JSonUtils.loadJSON(rpde_settings)
+        cad_settings_json = loadJSON(rpde_settings)
 
         if cad_settings_json.get("import", {}).get("CAD", {}).get("tessellationResolution", ""):
             cad_settings_json["import"]["CAD"]["tessellationResolution"] = self.tessellation_resolution
@@ -105,7 +105,7 @@ class CADImportFileOperator(bpy.types.Operator, bpy_extras.io_utils.ImportHelper
 
         rpde_settings_tmp = os.path.join(cad_import_path, "rpdp_dcc_plugin_cad_settings_tmp.json")
 
-        if JSonUtils.saveJSON(cad_settings_json, rpde_settings_tmp):
+        if saveJSON(cad_settings_json, rpde_settings_tmp):
             _ = convertCADFile(self.filepath, rpde_settings_tmp)
         else:
             print("Warning: could not set CAD import settings. Using default...")

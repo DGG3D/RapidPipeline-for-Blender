@@ -1,0 +1,61 @@
+{
+    "export": [],
+    "import": {
+      "CAD": {
+        "tessellationResolution":"fine", 
+        "sewTolerance": 0.05, 
+        "removeTJunctions": false,
+        "maxSurfaceDeviation": 0.4,
+        "maxAngle": 40,
+        "maxEdgeLength": 0
+      },
+    "general": {
+      "rotateZUp": false
+      }
+    },
+  "3dEdit": {
+    "meshNormals": {
+      "recomputeInputNormals": false
+    },
+    "repair": {
+      "windingOrder": {
+        "visibilityMode": "default",
+        "ignoreTransparency" : false,
+        "perLump": true
+      }
+    }
+  },
+    "optimize": {
+        "3dModelOptimizationMethod": {
+            "meshAndMaterialOptimization": {
+                "decimator": {
+                    "materialOptimization": {
+                        "keepMaterialsUVs": {}
+                    },
+                    "target": {
+                        "faces": {
+                            "value": 10000000
+                        },
+                        "deviation": {
+                            "percentage": 0
+                        }
+                    },
+                    "preserveNormals": true,
+                    "preserveTopology": false
+                }
+            }
+        }
+    },
+  "meshCulling": {
+    "occlusionCulling": {
+      "perMesh": false,
+      "quality": "default",
+      "ignoreTransparency": false,
+      "diffusion": "conservative",
+      "runAfterDecimator": false,
+      "sampleEdges": false,
+      "perLumpDecision" : true,
+      "lumpThreshold": 0.15
+    }
+   }
+  }

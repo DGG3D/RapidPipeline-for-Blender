@@ -1,0 +1,13 @@
+{
+"3dEdit": {
+    "modelEdit": {
+        "splitMultiMaterialMeshes": false
+    }
+},
+  "sceneGraphFlattening": {
+    "method": "auto",
+    "preservedSceneDepth": 0,
+    "splitMode" : "auto"
+  },
+  "export": []
+}

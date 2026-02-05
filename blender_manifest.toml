@@ -2,7 +2,7 @@ schema_version = "1.0.0"
 
 id = "processor_plugins"
 name = "RapidPipeline_for_Blender"
-version = "1.1.0"
+version = "1.2.0"
 
 blender_version_min = "4.2.0"
 type = "add-on"
@@ -16,4 +16,4 @@ copyright = [
 maintainer = "Darmstadt Graphics Group GmbH"
 tagline = "Optimize and process 3D models interactively and 100% locally"
 tags = ["Geometry", "Optimizer", "Decimation", "Remeshing"]
-website = "https://docs.rapidpipeline.com/docs/3dProcessor-Tutorials/blender-plugin-tutorials"
+website = "https://docs.rapidpipeline.com/docs/componentDocs/integrations/blender-plugin-setup"

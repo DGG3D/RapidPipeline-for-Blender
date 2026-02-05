@@ -203,19 +203,19 @@ def magic_actions_panel(main_layout:UILayout, context:Context, preview_collectio
         for magic_action in magic_actions:
             op:MagicActionOperator = button_layout.operator(
                 MagicActionOperator.bl_idname,
-                text=magic_action.action_name,
+                text=magic_action.name,
                 icon_value=getattr(context.scene,
-                                   f"magic_action_{version}_{os.path.basename(magic_action.path)}").icon_id,
-                depress=selected_magic_action_str == magic_action.action_name)
-            action_name = magic_action.action_name
+                                   f"magic_action_{version}_{magic_action.name}").icon_id,
+                depress=selected_magic_action_str == magic_action.name)
+            action_name = magic_action.name
             op.magic_action_str = action_name
 
         if selected_magic_action_str:
             selection = selected_magic_action_str
         from .magic_actions_operator import MagicAction
         selected_magic_action:MagicAction = next((action for action in magic_actions
-                                                  if action.action_name == selection
-                                                  and action.action_version == version), None)
+                                                  if action.name == selection
+                                                  and action.version == version), None)
 
         magic_layout = main_magic_layout.row()
         if selection != "Choose a Magic Action":
@@ -226,10 +226,10 @@ def magic_actions_panel(main_layout:UILayout, context:Context, preview_collectio
                 if context.scene.rpde_enable_preview:
                     image_value = None
                     magic_action_image_str = (
-                        f"magic_action_image_{version}_{os.path.basename(selected_magic_action.path)}")
+                        f"magic_action_image_{version}_{selected_magic_action.name}")
                     if magic_action_image_str in pcoll:
                         image_value = pcoll[magic_action_image_str]
-                    if selected_magic_action and selected_magic_action.action_image and image_value:
+                    if selected_magic_action and selected_magic_action.gif_path and image_value:
                         magic_layout.template_icon(icon_value=image_value.icon_id, scale=7.5)
                         magic_layout.separator()
                     else:
@@ -242,7 +242,7 @@ def magic_actions_panel(main_layout:UILayout, context:Context, preview_collectio
             if context.scene.rpde_enable_description:
                 #description of magic action
                 if selected_magic_action:
-                    magic_layout = prettyPrint(magic_layout, selected_magic_action.action_description, context)
+                    magic_layout = prettyPrint(magic_layout, selected_magic_action.description, context)
                     if selected_magic_action.action_link:
                         magic_layout = magic_layout.column()
                         magic_layout = magic_layout.column()

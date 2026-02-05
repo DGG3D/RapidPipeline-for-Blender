@@ -27,15 +27,13 @@ rpde/EULA_RapidPipelineEngine.rtf after installation, or during the install
 process) for further information.
 """
 
-import http.client
-import json
 import os
 import webbrowser
 from typing import Any, Tuple
 
 import bpy  # type: ignore
 
-from .json_utils import JSonUtils
+from .ProcessorPluginsCommon.magic_actions.licensing import ProcessorLicense as CommonsProcessorLicense
 
 
 class CancelTokenOperator(bpy.types.Operator):
@@ -146,45 +144,15 @@ class ProcessorLicense:
 
     @staticmethod
     def hasLicense() -> bool:
-        # if the plugin has its own license file, use it
-        if os.path.isfile(ProcessorLicense.LICENSE_FILE):
-            # sets envvar for the Plugin License File
-            os.environ["RPD_ACCOUNTFILE"] = ProcessorLicense.LICENSE_FILE
-            return True
-
-        # if there's no license file for the plugin, see global envvar
-        # returns true if license file could be found and a token is set
-        if "RPD_ACCOUNTFILE" not in os.environ:
-            return False
-        if not os.path.isfile(os.environ["RPD_ACCOUNTFILE"]):
-            return False
-        return ProcessorLicense.getAPIToken()
+        return CommonsProcessorLicense.hasLicense()
 
     @staticmethod
     def getAPIToken() -> str:
-        if not os.environ.get("RPD_ACCOUNTFILE", ""):
-            return ""
-        try:
-            account_data = JSonUtils.loadJSON(os.environ["RPD_ACCOUNTFILE"])
-            return account_data["token"]
-        except Exception:
-            print(f'Warning: The provided RPD Account file in {(os.environ["RPD_ACCOUNTFILE"])} could not be read.')
-            return None
+        return CommonsProcessorLicense.getAPIToken()
 
     @staticmethod
     def createLicenseFile(token: str, is_temp: bool) -> str:
-        if is_temp:
-            file_path = ProcessorLicense.TEMP_LICENSE_FILE
-        else:
-            file_path = ProcessorLicense.LICENSE_FILE
-
-        account_data = {"host": "api.rapidpipeline.com", "token": token}
-
-        print(f"Creating account file {file_path}...")
-        if not JSonUtils.saveJSON(account_data, file_path):
-            print("could not create file")
-            return None
-        return file_path
+        return CommonsProcessorLicense.createLicenseFile(token=token, is_temp=is_temp, update_env=False)
 
     @staticmethod
     def overrideSessionLicense(context: Any) -> Any:
@@ -213,35 +181,15 @@ class ProcessorLicense:
 
     @staticmethod
     def getUserInformation() -> Tuple[int, dict]:
-        api_token = ProcessorLicense.getAPIToken()
-        if not api_token:
-            return None
-
-        conn = http.client.HTTPSConnection("api.rapidpipeline.com")
-        payload = ''
-        headers = {
-        'Accept': 'application/json',
-        'Authorization': f'Bearer {api_token}'
-        }
-        conn.request("GET", "/api/v2/user", payload, headers)
-        res = conn.getresponse()
-        return res.getcode(), json.loads(res.read().decode("utf-8"))
+        return CommonsProcessorLicense.getUserInformation()
 
     @staticmethod
     def isTokenValid() -> bool:
-        code, info = ProcessorLicense.getUserInformation()
-        if code != 200:
-            print(f'{info.get("message")} - {info.get("error")}')
-            return False
-        return True
+        return CommonsProcessorLicense.isTokenValid()
 
     @staticmethod
     def getUserEmail() -> str:
-        code, info = ProcessorLicense.getUserInformation()
-        if code != 200:
-            print(f'{info.get("message")} - {info.get("error")}')
-            return ""
-        return info.get("data", {}).get("email", "")
+        return CommonsProcessorLicense.getUserEmail()
 
 clss = (
     LicensePanel, EnterLicenseOperator, CreateTokenOperator, CancelTokenOperator,

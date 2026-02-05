@@ -29,29 +29,10 @@ process) for further information.
 
 import traceback
 import uuid
-from typing import Any, Callable, List
+from typing import Any
 
 import bpy  # type: ignore
 
-
-def blend_scene_init_setattr(
-        scene:bpy, id:str,
-        path:List[str]=[],
-        value_function:Callable=None,
-        toggable:bool=False, reset:bool=False) -> bool:
-    if not path:
-        raise Exception(f"ERROR: error in setting blend attribute. Could not find path for id: {id}!")
-    if not get_uuid(path):
-        if toggable:
-            path_toggable = path.copy()
-            path_toggable.append("toggable")
-            set_uuid(set(path_toggable))
-        set_uuid(set(path))
-    if reset or (not hasattr(scene, get_uuid(path))):
-        setattr(scene, get_uuid(path), value_function)
-        return True
-    else:
-        return False
 
 def blend_scene_setattr(attribute_env:bpy.types.Scene, attribute:Any, value:Any):
     try:
@@ -61,13 +42,6 @@ def blend_scene_setattr(attribute_env:bpy.types.Scene, attribute:Any, value:Any)
         traceback.print_stack()
         traceback.print_exc()
 
-def blend_scene_setattr_enum(scene:bpy.types.Scene, property:Any, path:set):
-    if not get_uuid(path):
-        set_uuid(set(path))
-    if not hasattr(scene, get_uuid(path)):
-        setattr(scene, get_uuid(path), property)
-    else:
-        getattr(scene, get_uuid(path))
 
 def blend_scene_getattr(scene:bpy.types.Scene, path:set=[]) -> tuple[bpy.types.Scene, Any]:
     attribute_uuid = get_uuid(path)

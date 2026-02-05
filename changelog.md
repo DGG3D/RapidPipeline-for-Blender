@@ -2,6 +2,12 @@
 
 ## Changelog
 
+### Version v1.2.0 January 21st, 2026
+* Updates to Actions
+* Updated RPDE to Version 7.5.1
+* General improvements to stability
+* Fixed issue with USD export
+
 ### Version v1.1.0 November 18th, 2025
 * Improved performance for import of 3D and CAD files
 * Fixed a bug in exporting settings to json

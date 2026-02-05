@@ -27,20 +27,14 @@ rpde/EULA_RapidPipelineEngine.rtf after installation, or during the install
 process) for further information.
 """
 
-import os
 import textwrap
-from typing import Any
-
-try:
-    import tomllib
-except ModuleNotFoundError:
-    pass
-
 
 import bpy  # type: ignore
 
 from .gui_commons import parseTextFile
 from .license_manager import OpenLinkOperator
+from .main import MainData
+from .ProcessorPluginsCommon.common.about_dialog_common import AboutDialogBase
 
 
 class OverrideTokenOperator(bpy.types.Operator):
@@ -74,15 +68,8 @@ class AboutDialogPanel(bpy.types.Panel):
 
     licenses: bpy.props.StringProperty() # type: ignore
 
-    dirname = os.path.dirname(__file__)
-    blender_manifest = os.path.join(dirname, 'blender_manifest.toml')
-
-    try:
-        with open(blender_manifest, 'rb') as f:
-            blender_manifest = tomllib.load(f)
-        blender_plugin_info = f"Blender Plugin Version: {blender_manifest['version']}"
-    except Exception:
-        print("Warning, could not open blender Manifest file")
+    main_data = MainData()
+    dialog_base = AboutDialogBase(main_data.version, tool=main_data.tool)
 
     #https://blender.stackexchange.com/questions/74052/wrap-text-within-a-panel
     def prettyPrintLicense(self, text:str, context:bpy.types.Context):
@@ -111,7 +98,7 @@ class AboutDialogPanel(bpy.types.Panel):
         layout = self.layout
         panel_layout = layout.row()
         panel_layout = layout.row()
-        panel_layout.label(text=self.blender_plugin_info)
+        panel_layout.label(text=self.dialog_base.plugin_info)
         panel_layout = layout.row()
         panel_layout = layout.row()
         panel_layout = layout.row()
@@ -148,11 +135,6 @@ class AboutDialog(bpy.types.Operator):
         bpy.context.scene.licenses = license_disclaimer
 
         return {'FINISHED'}
-
-
-    def __init__(self, *args:tuple, **kwargs:dict[str,Any]):
-        super().__init__(*args, **kwargs)
-        return
 
     def addOSSLicense(self, license_name: str, license_file: str):
         """

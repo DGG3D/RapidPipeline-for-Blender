@@ -35,8 +35,8 @@ import bpy
 import bpy_extras
 from bpy.types import Context, Event, Operator
 
-from .json_utils import JSonUtils
 from .magic_actions_operator import MagicAction, MagicActionOperator, get_import_actions, get_version
+from .ProcessorPluginsCommon.magic_actions.utils import saveJSON
 from .run_operator import RunPipeline, get_export_settings
 from .scene_utils import blend_create_prop, blend_scene_getattr
 
@@ -70,19 +70,19 @@ class ImportFileOperator(Operator, bpy_extras.io_utils.ImportHelper):
 
     import_actions:list[MagicAction] = get_import_actions()
     for action in import_actions:
-        if not cad_import and "Import CAD" in action.action_name:
+        if not cad_import and "Import CAD" in action.name:
             import_actions.remove(action)
 
     def invoke(self, context:Context, event:Event) -> set:
         # select first import action
-        bpy.ops.processor.magic_action_button(magic_action_str=self.import_actions[0].action_name)
+        bpy.ops.processor.magic_action_button(magic_action_str=self.import_actions[0].name)
         return super().invoke(context, event)
 
     def cancel(self, context:Context):
         # select first magic action
         from .magic_actions_operator import MagicAction, get_magic_actions
         magic_actions_sorted:list[MagicAction] = get_magic_actions()
-        first_magic_action = magic_actions_sorted[0].action_name
+        first_magic_action = magic_actions_sorted[0].name
         bpy.ops.processor.magic_action_button(magic_action_str=first_magic_action)
         return None
 
@@ -101,19 +101,19 @@ class ImportFileOperator(Operator, bpy_extras.io_utils.ImportHelper):
         for magic_action in self.import_actions:
             op:MagicActionOperator = button_layout.operator(
                 MagicActionOperator.bl_idname,
-                text=magic_action.action_name,
+                text=magic_action.name,
                 icon_value=getattr(context.scene,
-                                   f"magic_action_{version}_{os.path.basename(magic_action.path)}").icon_id,
-                depress=selected_magic_action_str == magic_action.action_name)
-            action_name = magic_action.action_name
+                                   f"magic_action_{version}_{magic_action.name}").icon_id,
+                depress=selected_magic_action_str == magic_action.name)
+            action_name = magic_action.name
             op.magic_action_str = action_name
 
         if selected_magic_action_str:
             selection = selected_magic_action_str
         from .magic_actions_operator import MagicAction
         selected_magic_action:MagicAction = next((action for action in get_import_actions()
-                                                  if action.action_name == selection
-                                                  and action.action_version == get_version()), None)
+                                                  if action.name == selection
+                                                  and action.version == get_version()), None)
 
         magic_layout = main_magic_layout.row()
         if selection != "Choose a Magic Action":
@@ -121,7 +121,7 @@ class ImportFileOperator(Operator, bpy_extras.io_utils.ImportHelper):
             magic_layout = main_magic_layout.row()
             magic_layout = main_magic_layout.row()
             if context.scene.rpde_enable_preview:
-                action_image_str = f"magic_action_image_{version}_{os.path.basename(magic_action.path)}"
+                action_image_str = f"magic_action_image_{version}_{selected_magic_action.name}"
                 if action_image_str in pcoll:
                     magic_layout.template_icon(icon_value=pcoll[
                         action_image_str].icon_id, scale=5.0)
@@ -134,7 +134,7 @@ class ImportFileOperator(Operator, bpy_extras.io_utils.ImportHelper):
             if context.scene.rpde_enable_description:
                 #description of magic action
                 if selected_magic_action:
-                    prettyPrint(magic_layout, selected_magic_action.action_description, context)
+                    prettyPrint(magic_layout, selected_magic_action.description, context)
                 else:
                     magic_layout.label(text="Warning: Could not find Magic Action description")
             magic_layout = main_magic_layout.row()
@@ -155,7 +155,7 @@ class ImportFileOperator(Operator, bpy_extras.io_utils.ImportHelper):
                     blend_create_prop(right_col, attribute_env, attribute, name="")
                     sub = box_layout.row()
             else:
-                print(f"Warning, could not find options for MagicAction: {selected_magic_action.action_name}")
+                print(f"Warning, could not find options for MagicAction: {selected_magic_action.name}")
         else:
             magic_layout = main_magic_layout.row()
             warning_msg = "Please choose an action above"
@@ -185,7 +185,7 @@ class ImportFileOperator(Operator, bpy_extras.io_utils.ImportHelper):
         import_settings_dict = current_settings
         rpde_settings_tmp = os.path.join(import_path, "rpdp_dcc_plugin_import_settings_tmp.json")
 
-        if JSonUtils.saveJSON(import_settings_dict, rpde_settings_tmp):
+        if saveJSON(import_settings_dict, rpde_settings_tmp):
             _ = import_file(self.filepath, rpde_settings_tmp)
         else:
             print("Warning, could not save import settings.")

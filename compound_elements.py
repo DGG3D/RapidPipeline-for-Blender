@@ -803,6 +803,7 @@ class OneOfWidget(CompoundUIElement):
             for enum in possible_enums:
                 if value and value in enum.identifier:
                     setattr(attribute_env, attribute, enum.identifier)
+                    break
 
         else:
             return super().setValue(value, context)

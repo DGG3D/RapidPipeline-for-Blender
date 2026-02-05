@@ -1,5 +1,10 @@
 import os
-from PySide6 import QtWidgets, QtCore
+try:
+    from PySide6 import QtWidgets, QtCore
+    PYSIDE_VERSION = 6
+except ImportError:
+    from PySide2 import QtWidgets, QtCore
+    PYSIDE_VERSION = 2
 import webbrowser
 
 from magic_actions.licensing import ProcessorLicense
