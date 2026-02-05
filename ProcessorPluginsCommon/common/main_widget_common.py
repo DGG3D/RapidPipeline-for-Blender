@@ -7,7 +7,7 @@ from pathlib import Path
 from sys import platform
 from typing import List, Tuple
 
-from magic_actions import utils as action_utils
+from ..magic_actions import utils as action_utils
 
 # type defs
 ACTION_LIST = List[action_utils.MagicAction]

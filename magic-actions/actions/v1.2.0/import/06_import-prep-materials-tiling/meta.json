@@ -1,0 +1,77 @@
+{
+    "uid"         : "MA2025052906",
+    "min_engine_version" : [7,5,0],
+    "ui_prio_hints" : { "Substance" : 2, "Maya" : -1, "3ds Max" : -1, "blender" : -1, "UnrealEngine" : 1 },
+    "name"        : "Tiling UVs",
+    "button_name" : "Tiling UVs",
+    "read_more" : "https://docs.rapidpipeline.com/docs/componentDocs/actions/3d-processor-actions#--tiling-uvs",
+    "explanation_long" : "Imports a 3D/CAD model and assigns tiling UVs. These UVs are non-paintable, but great for material assignment workflows. UVs are created through triplanar mapping.",    
+    "explanation" : "Imports a 3D/CAD model and assigns tiling UVs. These UVs are non-paintable, but great for material assignment workflows. UVs are created through triplanar mapping.",
+    "exposed_options" : [
+        {
+            "name": "Tiling UV Scale",
+            "description" : "The scale in meters for the cubic tri-planar UV projection.",
+            "description_long" : "The scale in meters for the cubic tri-planar UV projection. <br/>The 1.0 default will create 1-meter UVs, which means when UV space is examined, an asset smaller than 1 meter will be located inside the 0-1 UV square. <br/>To create real-world-scale UVs, set this value to match the scene units. For example, to create 1-inch UVs set the value to 0.0254. <br/><br/>![tiling-uv-scale](import/00-cad_import/tiling-uv-scale.webp)",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.materialOptimization.materialMerger.materialRegenerator.materialReplacer.defaultMaterial.generateUVs.cubeUnwrap.scale"
+        },
+		{
+            "name": "Simplify with UVs",
+            "description" : "Decimates the tessellated mesh to the specified triangle count during import, and preserves UV texture coordinates.",
+            "description_long" : "Decimates the tessellated mesh to the specified triangle count during import, and preserves UV texture coordinates. <br/>This can help speed up the import of very dense meshes, by providing an upper cap on complexity. <br/>Vertices are collapsed and merged by distance and angle, while attempting to preserve the original volume and curvature. <br/>RapidPipeline will attempt to get as close as possible to the chosen value, though sometimes a mesh may require a slightly different final triangle count to preserve surface continuity. <br/>To disable this feature, set it to a very high value like 50000000 (fifty million). <br/><br/>![decimate-mesh](import/00-cad_import/decimate-mesh.webp)",
+            "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.target.faces.value"
+		},
+        {
+            "name": "Remove Occluded Parts",
+            "description": "Removes invisible (occluded) parts from the 3D model on import.",
+            "description_long": "Removes invisible (occluded) parts from the 3D model on import. <br/>If there are any holes or gaps in the model this may prevent interior parts from being culled, because they may potentially be visible from the outside. <br/>Note that surfaces with a transparent material are not considered as occluders, so the interior of a car will not be culled if the window meshes are transparent. To disable this behavior, use the action *Remove Occluded Parts*. <br/><br/>![remove-occluded-parts](import/00-cad_import/remove-occluded-parts.webp)",
+            "path": "meshCulling.occlusionCulling",
+            "toggled": false
+        },
+        {
+            "name": "Convert Z-Up to Y-Up",
+            "description": "Turns rotation to z-axis pointing upwards on/off. Helpful if origin axis system is Z-Up and target system is Y-Up.",
+            "description_long": "Turns rotation to z-axis pointing upwards on/off. Helpful if origin axis system is Z-Up and target system is Y-Up. <br/><br/>![convert-z-up-to-y-up](import/00-cad_import/convert-z-up-to-y-up.webp)",
+            "path": "import.general.rotateZUp"
+        },
+        {
+            "name": "Fix Winding Order",
+            "description": "Automatically fix the winding order of parts on import, if patches are showing up inverted.",
+            "description_long": "Automatically fix the winding order of parts on import. <br/>This is helpful when importing CAD assets, if patches are showing up inverted after being imported and tessellated. <br/>It will attempt to detect flipped mesh chunks, and flip all the faces of each affected chunk. <br/>Note that some parts may still be flipped, be sure to check the results afterwards. To check whether chunks are flipped, it helps to enable backface culling in your application's view settings. <br/><br/>![fix-winding-order](import/00-cad_import/fix-winding-order.webp)",
+            "path": "3dEdit.repair.windingOrder",
+            "toggled": false
+        },
+        {
+            "name": "CAD Tessellation Resolution",
+            "description": "Tessellation resolution for imported CAD surfaces. Custom enables additional settings, below.",
+            "description_long": "Tessellation resolution for imported CAD surfaces. <br/>_Extra Fine_: The most detailed and dense tessellation. <br/>_Fine_: A dense tessellation. <br/>_Medium_: A medium-resolution tessellation. <br/>_Coarse_: A simpler more approximated tessellation. <br/>_Extra Coarse_: A very simple tessellation for preview or proxy purposes. <br/>_Custom_: Enables additional settings, see below.<br/><br/>![tessellation-resolution](import/00-cad_import/tessellation-resolution.webp)",
+            "path": "import.CAD.tessellationResolution"
+        },
+        {
+            "name": "CAD Sewing Tolerance",
+            "description": "Tolerance for the sewing operation before tessellation. This helps merge multiple surface parts into coherent patches.",
+            "description_long": "Tolerance for the sewing operation on the boundary representations (b-reps) before tessellation. <br/>This helps merge multiple surface parts into coherent patches. <br/>Default is 0.05mm, which means that surfaces with a gap greater than 0.05mm will not be welded together. <br/>A setting of 0 will disable the function. <br/><br/>![cad-sewing-tolerance](import/00-cad_import/cad-sewing-tolerance.webp)",
+            "path": "import.CAD.sewTolerance"
+        },
+        {
+            "name": "CAD Max Surface Deviation",
+            "description": "Maximum distance between the CAD surface and the tessellation in mm. Only if tessellation Resolution is Custom.",
+            "description_long": "Maximum distance between the CAD surface and the tessellation in mm (sometimes also referred to as Chord Height).  Only if Tessellation Resolution is set to *Custom*. <br/><br/>![custom-cad-tessellation-settings](import/00-cad_import/custom-cad-tessellation-settings.webp)",
+            "path": "import.CAD.maxSurfaceDeviation",
+            "toggled": false
+        },
+		{
+            "name": "CAD Max Angle",
+            "description": "Decreasing the max angle generates more faces in high curvature areas, such as fillets. Only if tessellation Resolution is Custom.",
+            "description_long": "Decreasing the max angle generates more faces in high curvature areas, such as fillets for example. Only if tessellation Resolution is set to Custom.",
+            "path": "import.CAD.maxAngle",
+            "toggled": false
+        },
+		{
+            "name": "CAD Max Edge Length",
+            "description": "Controls the maximum length of edges per face. Large parts might become overtessellated, including flat surfaces. Only if tessellation Resolution is Custom.",
+            "description_long": "Controls the maximum length of edges per face. Caution, as the value is absolute (mm), large parts might become overtessellated, including flat surfaces. Only if tessellation Resolution is set to Custom.",
+            "path": "import.CAD.maxEdgeLength",
+            "toggled": false
+        }
+    ]
+}

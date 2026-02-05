@@ -4,7 +4,7 @@
     "ui_prio_hints" : { "Substance" : -1, "Maya" : 11, "3ds Max" : 11, "blender" : 11, "UnrealEngine" : 11 },
     "name"        : "Generate UV Atlas",
     "button_name" : "Generate UV Atlas",
-    "read_more" : "https://docs.rapidpipeline.com/",
+    "read_more" : "https://docs.rapidpipeline.com/docs/componentDocs/actions/3d-processor-actions#--generate-uv-atlas",
     "explanation_long" : "Generates a unified UV atlas for the selected parts. Materials are replaced with a Default Material and an optional checker texture can be added. UVs are non-overlapping and global. Warning: This overrides existing UV sets and might therefore lead to issues with existing Texture Sets.",
     "explanation" : "Generates a unified UV atlas for the selected parts. Materials are replaced with a Default Material and an optional checker texture can be added. UVs are non-overlapping and global.",
     "exposed_options" : [

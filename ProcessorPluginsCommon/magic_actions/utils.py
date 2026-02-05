@@ -55,6 +55,7 @@ def saveJSON(dictionary: dict, file_path: str) -> bool:
         with open(file_path, "w", encoding="utf-8") as json_handle:
             json.dump(dictionary, json_handle, indent=4, ensure_ascii=True)
             json_handle.flush()
+        return True
     except Exception:
         print(f"Unable to save JSon file: {file_path}")
         raise

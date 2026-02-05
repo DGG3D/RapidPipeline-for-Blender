@@ -1,7 +1,12 @@
 import os
 from typing import List, Dict
 import webbrowser
-from PySide6 import QtWidgets, QtCore, QtGui
+try:
+    from PySide6 import QtWidgets, QtCore, QtGui
+    PYSIDE_VERSION = 6
+except ImportError:
+    from PySide2 import QtWidgets, QtCore, QtGui
+    PYSIDE_VERSION = 2
 import copy
 
 from magic_actions import utils as action_utils

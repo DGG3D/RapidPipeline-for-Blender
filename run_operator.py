@@ -36,7 +36,6 @@ from sys import platform
 from typing import Any
 
 import bpy  # type: ignore
-import bpy.utils.previews  # type: ignore
 
 from .run_rpde import RunPipeline
 from .ui_utils import deselect_all, fix_animation, select_children, set_object_mode
@@ -47,7 +46,8 @@ base_dcc_data_folder = os.path.join(
 os.environ["RPDP_PROCESSOR_DCC_DATA"] = os.path.join(base_dcc_data_folder, "RapidPipeline 3D Processor Plugins")
 
 from .gui_commons import UserDialog
-from .json_utils import JSonUtils
+from .main import MainData
+from .ProcessorPluginsCommon.magic_actions.utils import saveJSON
 
 
 def get_export_settings(file_name:str = "") -> list[dict]:
@@ -55,7 +55,9 @@ def get_export_settings(file_name:str = "") -> list[dict]:
             {
                 "fileName": file_name,
                 "textureMapFilePrefix": "",
-                "discard": {},
+                "discard": {
+                    "emptyNodes": True
+                },
                 "format": {
                     "glb": {
                     "pbrMaterial": {
@@ -131,8 +133,9 @@ class RunOperator(bpy.types.Operator):
     output_cmd: bpy.props.StringProperty(options={'HIDDEN'}) # type: ignore
 
     # define file paths
-    extension = os.environ.get("RPDP_PROCESSOR_DCC_OUTPUT", "glb")
-    import_extension = "glb"
+    main_data = MainData()
+    extension = main_data.getOptimizedFormat()
+    import_extension = main_data.getUnOptimizedFormat()
     output_folder: str = os.environ["RPDP_PROCESSOR_DCC_DATA"]
     output_filename = ""
 
@@ -182,7 +185,7 @@ class RunOperator(bpy.types.Operator):
             self.output_filename = "rpde_file"
 
         json_path = self.getOutputJSonPath()
-        if not JSonUtils.saveJSON(current_settings, json_path):
+        if not saveJSON(current_settings, json_path):
             error_message = "Unable to save temporary settings file for RapidPipeline execution."
             UserDialog.critical(self, "Unable to Run RapidPipeline", error_message)
         print(f"Exported Settings: {json_path}")
@@ -214,7 +217,7 @@ class RunOperator(bpy.types.Operator):
 
         else:
             from .export_operator import global_export_path
-            RunPipeline.runPipeline(input_file, output_json_path, global_export_path, copied_nodes)
+            RunPipeline.runPipeline(input_file, output_json_path, global_export_path, copied_nodes, True)
 
 
     def getOutputJSonPath(self) -> str:
@@ -225,7 +228,8 @@ class RunOperator(bpy.types.Operator):
 
 
     def getProcessorInputFile(self) -> str:
-        return os.path.join(self.getExecutionOutputFolder(), f"{self.output_filename}.{self.extension}")
+        return self.main_data.getOptimizedFilePath(
+            self.output_folder, type_override=self.main_data.getOptimizedFormat(), file_name=self.output_filename)
 
     def getExecutionOutputFolder(self) -> str:
         return os.path.join(self.output_folder, f"0_{self.extension}")
@@ -497,7 +501,7 @@ class RunOperator(bpy.types.Operator):
 
         else:
             from .export_operator import global_export_ext, global_export_path
-            optimized_file = self.getOptimizedFilePath(global_export_path, global_export_ext)
+            optimized_file = self.main_data.getOptimizedFilePath(global_export_path, global_export_ext.lower())
             # RPDE results are placed in a certain subfolder, so we copy it over to the location
             # move file and textures to specific output location
             shutil.copytree(os.path.dirname(optimized_file), os.path.dirname(global_export_path), dirs_exist_ok=True)
@@ -511,16 +515,6 @@ class RunOperator(bpy.types.Operator):
         UserDialog.okInfo(self, "Process Successful", confirm_label)
         self.report({'INFO'}, "Process Successful.")
         print("Process Successful")
-
-    def getOptimizedFilePath(self, output_folder:str, type_override:str) -> str:
-        """
-        This function should somehow use self.getOptimizedFolder().
-        E.g.: os.path.join(self.getOptimizedFolder(), "0_fbx", "scene_file.fbx")
-        The format selection is left up to each DCC implementation.
-        """
-        type_override = type_override.lower()
-        file_type = type_override
-        return os.path.join(output_folder, f"0_{file_type}", f"scene_file.{file_type}")
 
     def getOutputFilePath(self) -> str:
         return os.path.join(self.getExecutionOutputFolder(), f"{self.output_filename}.{self.extension}")

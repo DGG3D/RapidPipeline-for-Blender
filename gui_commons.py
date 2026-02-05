@@ -36,8 +36,8 @@ from typing import Any, Dict, List
 
 import bpy  # type: ignore
 
-from .json_utils import JSonUtils
-from .scene_utils import blend_scene_getattr, blend_scene_setattr, blend_scene_setattr_enum
+from .ProcessorPluginsCommon.magic_actions.utils import getSchemaDefs, loadJSON, saveJSON, solveSchemaRefs
+from .scene_utils import blend_scene_getattr, blend_scene_setattr
 
 
 def parseTextFile(file_path: str, encoding: bool = "utf-8") -> List[str]:
@@ -78,10 +78,10 @@ class ProcessorPlugin:
         """
         Reads schema file from predetermined path and updates class variable with file contents.
         """
-        schema = JSonUtils.loadJSON(cls.SCHEMA_PATH)
-        schema_defs = JSonUtils.getSchemaDefs(schema)
-        schema_solved, _ = JSonUtils.solveSchemaRefs(schema, schema_defs)
-        JSonUtils.saveJSON(schema_solved, cls.SOLVED_SCHEMA_PATH)
+        schema = loadJSON(cls.SCHEMA_PATH)
+        schema_defs = getSchemaDefs(schema)
+        schema_solved, _ = solveSchemaRefs(schema, schema_defs)
+        saveJSON(schema_solved, cls.SOLVED_SCHEMA_PATH)
 
         cls.__schema_solved.clear()
         cls.__schema_solved.update(schema_solved)
@@ -102,30 +102,13 @@ class ProcessorPlugin:
             return False
 
         try:
-            metadata = JSonUtils.loadJSON(cls.METADATA_PATH)
+            metadata = loadJSON(cls.METADATA_PATH)
         except Exception:
             return False
 
         cls.__metadata.clear()
         cls.__metadata.update(metadata)
         return True
-
-    @classmethod
-    def getMetadata(cls) -> dict:
-        return cls.__metadata
-
-    @classmethod
-    def isDarkTheme(cls) -> bool:
-        # overrides dark theme, useful in certain apps such as blender
-        if "RPDP_PROCESSOR_DCC_DARK_THEME" in os.environ:
-            return os.environ["RPDP_PROCESSOR_DCC_DARK_THEME"] == "1"
-        return False
-
-    @classmethod
-    def getLogoPath(cls) -> str:
-        # the logo in use differs depending on the color scheme of the app
-        logo_color = "black" if not cls.isDarkTheme() else "white"
-        return f":/logos/logo_{logo_color}.svg"
 
     ui_rules = {}
 
@@ -137,41 +120,12 @@ class ProcessorPlugin:
             os.environ["RPDP_PROCESSOR_DCC_RULES"] = default_rules_path
 
         # read UI rules file, if any
-        cls.ui_rules.update(JSonUtils.loadJSON(os.environ["RPDP_PROCESSOR_DCC_RULES"]))
+        cls.ui_rules.update(loadJSON(os.environ["RPDP_PROCESSOR_DCC_RULES"]))
 
     widgets_from_path: Dict[str, "UIElement"] = {}
     LEVELS = ["basic", "advanced", "expert"]
     dividers_by_level: Dict[str, List[Any]] = {k: [] for k in LEVELS}
 
-    @classmethod
-    def getAllWidgets(cls) -> List["UIElement"]:
-        return list(cls.widgets_from_path.values())
-
-    @classmethod
-    def getWidgetByPath(cls, path: str) -> List["UIElement"]:
-        return cls.widgets_from_path.get(path, None)
-
-    @classmethod
-    def trackWidget(cls, path: str, widget: "UIElement"):
-        widget_path = widget.path
-        if widget_path in cls.widgets_from_path:
-            raise ValueError(f"Unable to create UI Element {path}, path already exists/is not unique.")
-        else:
-            cls.widgets_from_path[widget_path] = widget
-
-    @classmethod
-    def trackDivider(cls, level: str, divider: Any):
-        if level not in cls.dividers_by_level:
-            cls.dividers_by_level[level] = []
-        cls.dividers_by_level[level].append(divider)
-
-    @classmethod
-    def getAllDividersByLevel(cls) -> Dict[str, List[Any]]:
-        return cls.dividers_by_level
-
-    @classmethod
-    def getAllDividersForLevel(cls, level: str) -> List[Any]:
-        return cls.dividers_by_level[level]
 
     @classmethod
     def reset(cls):
@@ -181,36 +135,6 @@ class ProcessorPlugin:
         """
         cls.widgets_from_path.clear()
         cls.dividers_by_level.clear()
-
-    @classmethod
-    def getChildElements(cls, path_components: List[str]) -> List["UIElement"]:
-        """
-        Returns all UI elements that are children of a given UIElement path.
-        The list is ordered descending by how far away the child nodes are from the root.
-        """
-        path = "/".join(path_components[:-1])  # ignore element itself
-        child_elements = list(
-            {k: cls.widgets_from_path[k] for k in cls.widgets_from_path if k.startswith(path)}.values()
-        )
-        child_elements.sort(key=lambda x: len(x.path_components), reverse=True)
-        return child_elements
-
-    @classmethod
-    def getAllParentElements(cls, path_components: List[str]) -> List["UIElement"]:
-        """
-        Returns all UI elements that are parents of a given UIElement path.
-        The list is ordered descending by how far away the child nodes are from the root.
-        """
-        if not path_components:
-            return []
-        path_components = path_components[:-1]  # ignore element itself
-        if not path_components:
-            return []
-        parent_elements = [
-            cls.widgets_from_path["/".join(path_components[: i + 1])] for i in range(len(path_components))
-        ]
-        parent_elements.sort(key=lambda x: len(x.path_components), reverse=True)
-        return parent_elements
 
 
 class SettingsValidator:
@@ -436,6 +360,7 @@ class UIElement():
             enum_options = []
             for element in self.schema['enum']:
                 enum_options.append((element,)*3)
+            from .setup_properties import blend_scene_setattr_enum
             blend_scene_setattr_enum(bpy.types.Scene,
                 bpy.props.EnumProperty(items=enum_options), self.path)
             blend_scene_setattr(

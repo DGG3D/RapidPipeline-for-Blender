@@ -1,0 +1,42 @@
+{
+    "uid"         : "MA2025052910",
+    "min_engine_version" : [7,4,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 3, "3ds Max" : 3, "blender" : 3, "UnrealEngine" : 3 },
+    "name"        : "Remove Occluded Parts",
+    "button_name" : "Remove Occluded Parts",
+    "read_more" : "https://docs.rapidpipeline.com/docs/componentDocs/actions/3d-processor-actions#--remove-occluded-parts",
+    "explanation_long" : "Removes occluded parts from the 3D model, for the whole 3D model or individually for each mesh. Per triangle or per part. Option to treat transparent parts as occluders (ignore transparency).",
+    "explanation" : "Removes occluded parts from the 3D model, for the whole 3D model or individually for each mesh. Per triangle or per part. Option to treat transparent parts as occluders (ignore transparency).",
+    "exposed_options" : [
+        {
+            "name": "Culling Quality",
+            "description" : "Specify how thorough triangle visibility should be determined.",
+            "description_long" : "Specify how thorough triangle visibility should be determined. <br/>***fast***: Visibility is checked in a single pass, this is usually a good enough quality for most meshes. <br/>***thorough***: More passes are used to determine visibility. This is a good tradeoff between fast and slow methods. <br/>***extreme***: The asset is checked exhaustively for non-visible mesh parts. This can take a long time to process, but produces the highest quality visibility calculation.",
+            "path": "meshCulling.occlusionCulling.quality"
+        },
+        {
+            "name": "Per Mesh",
+            "description" : "This causes visibility to only be checked within the same mesh node, and not across the whole (selected) asset.",
+            "description_long" : "This causes visibility to only be checked within the same mesh node, and not across the whole (selected) asset. Each mesh node is then examined for occluded parts only inside itself. <br/>When disabled, the whole asset is checked for occluded parts which could be culled, which may then include whole mesh nodes. <br/>*Per Mesh* can be used to only remove parts which are invisible within each single mesh node.",
+            "path": "meshCulling.occlusionCulling.perMesh"
+        },
+        {
+            "name": "Ignore Transparency",
+            "description" : "This causes culling to treat transparent geometry as opaque.",
+            "description_long" : "This causes culling to treat transparent geometry as opaque. <br/>By default, surfaces with a transparent material are not considered as occluders, so the interior of a car will not be culled if the window meshes are transparent. <br/>*Ignore Transparency* turns off this default behavior, so the interior of the car could then be culled.",
+            "path": "meshCulling.occlusionCulling.ignoreTransparency"
+        },
+        {
+            "name": "Visibility Per Part",
+            "description" : "This causes culling to be performed for whole mesh chunks, rather than per triangle. A mesh chunk is each set of connected triangles within a mesh node.",
+            "description_long" : "This causes culling to be performed for whole mesh chunks, rather than per triangle. A mesh chunk is each set of connected triangles within a mesh node. <br/>When disabled, culling is performed for each triangle, which can remove more triangles but can also leave more 'floating' triangles. Increasing the *Culling Quality* can improve the result of per-triangle culling.",
+            "path": "meshCulling.occlusionCulling.perLumpDecision"
+        },
+        {
+            "name": "Part Visibility Threshold",
+            "description" : "Threshold % of triangles deciding if a part is visible or not. The default of 0.1 means a part with less than 10 pct visible triangles is considered invisible and will therefore be entirely removed.",
+            "description_long" : "Threshold in % of triangles deciding if a part is considered visible or not. The default of 0.1 means a part with less than 10 pct visible triangles is considered invisible and will therefore be entirely removed. This metric helps with removing parts which are mostly invisible but still have small visible parts. This setting requires Visibility per Part to be active.",
+            "path": "meshCulling.occlusionCulling.lumpThreshold"
+        }
+   ]
+}

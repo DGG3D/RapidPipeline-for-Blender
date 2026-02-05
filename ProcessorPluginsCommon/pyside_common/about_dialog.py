@@ -1,17 +1,24 @@
 import os
 import webbrowser
-from PySide6 import QtWidgets, QtCore, QtGui
+try:
+    from PySide6 import QtWidgets, QtCore, QtGui
+    PYSIDE_VERSION = 6
+except ImportError:
+    from PySide2 import QtWidgets, QtCore, QtGui
+    PYSIDE_VERSION = 2
 
 from pyside_common import utils as pyside_utils
 from magic_actions import utils as action_utils
 
-class AboutDialog(QtWidgets.QDialog):
+from common.about_dialog_common import AboutDialogBase
+
+class AboutDialog(AboutDialogBase, QtWidgets.QDialog):
     def __init__(self, parent: QtWidgets.QWidget, tool:str, plugin_version:str, plugin_root:str):
-        super().__init__(parent)
+        super().__init__(plugin_version=plugin_version, tool=tool, parent=parent)
 
         # set window icon and title
         self.setWindowIcon(pyside_utils.getLogoIcon())
-        self.setWindowTitle("About the Plugin & Open Source Licenses")
+        self.setWindowTitle(AboutDialogBase.window_title)
 
         self.main_layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.main_layout)
@@ -20,7 +27,7 @@ class AboutDialog(QtWidgets.QDialog):
         self.main_layout.addWidget(pyside_utils.getFullLogoLabel(width=200), alignment=QtCore.Qt.AlignCenter)
         self.main_layout.addSpacing(5)
 
-        name_label = QtWidgets.QLabel(f"The RapidPipeline Plugin for {tool} v{plugin_version}")
+        name_label = QtWidgets.QLabel(self.plugin_info)
         name_label.setStyleSheet('font-size: 16px;')
         self.main_layout.addWidget(name_label, alignment=QtCore.Qt.AlignCenter)
         self.main_layout.addSpacing(5)
@@ -34,7 +41,7 @@ class AboutDialog(QtWidgets.QDialog):
         self.main_layout.addSpacing(5)
 
         license_str = f"The RapidPipeline Plugin for {tool} is licensed\nunder the MIT License (excluding the RapidPipeline engine).\n"
-        license_str += "Uses PySide6 libraries, licensed as LGPLv3, and Tabler Icons, licensed as MIT.\nFull licenses below."
+        license_str += f"Uses PySide{PYSIDE_VERSION} libraries, licensed as LGPLv3, and Tabler Icons, licensed as MIT.\nFull licenses below."
         license_label = QtWidgets.QLabel(license_str, alignment=QtCore.Qt.AlignCenter)
         license_label.setWordWrap(True)
         self.main_layout.addWidget(license_label, alignment=QtCore.Qt.AlignCenter)
@@ -54,7 +61,7 @@ class AboutDialog(QtWidgets.QDialog):
         self.addOSSLicense(f"The RapidPipeline Plugin for {tool}", os.path.join(plugin_root, "LICENSE.md"))
         self.addOSSLicense("The RapidPipeline Plugin Commons", os.path.join(plugin_root, "rpd_plugins_common", "LICENSE.md"))
         self.addOSSLicense("The RapidPipeline Magic Actions", os.path.join(plugin_root, "magic-actions", "LICENSE.md"))
-        self.addOSSLicense("PySide6", os.path.join(plugin_root, "rpd_plugins_common", "licenses", "PYSIDE6.md"))
+        self.addOSSLicense(f"PySide{PYSIDE_VERSION}", os.path.join(plugin_root, "rpd_plugins_common", "licenses", "PySide2.md"))
         self.addOSSLicense("Tabler Icons", os.path.join(plugin_root, "rpd_plugins_common", "licenses", "TABLER.md"))
 
         self.setFixedWidth(420)

@@ -1,6 +1,11 @@
 import os
 from typing import Any, List, Tuple
-from PySide6 import QtCore, QtWidgets, QtGui
+try:
+    from PySide6 import QtWidgets, QtCore
+    PYSIDE_VERSION = 6
+except ImportError:
+    from PySide2 import QtWidgets, QtCore
+    PYSIDE_VERSION = 2
 from abc import abstractmethod
 
 import utils as pyside_utils

@@ -4,33 +4,38 @@
     "ui_prio_hints" : { "Substance" : -1, "Maya" : 5, "3ds Max" : 5, "blender" : 5, "UnrealEngine" : 5 },
     "name"        : "Decimate Mesh",
     "button_name" : "Decimate Mesh",
-    "read_more" : "https://docs.rapidpipeline.com/docs/componentDocs/3dProcessor/Actions/v1.0.0/3d-processor-actions#--decimate-mesh",
+    "read_more" : "https://docs.rapidpipeline.com/docs/componentDocs/actions/3d-processor-actions#--decimate-mesh",
     "explanation_long" : "Simplifies a mesh by reducing the number of faces while preserving materials, UVs and textures. This is useful for reducing file size, and improving performance by reducing memory usage. <br/>Vertices are collapsed and merged by distance and angle, while attempting to preserve the original volume and curvature. The decimator is capable of reducing mesh complexity while keeping important properties such as original UV coordinates, normals and topology in place. <br/>Mesh Decimation is computed from the original mesh, therefore the quality of the result highly depends on the quality of the input topology.",
     "explanation" : "Simplifies a mesh by reducing the number of triangles while preserving materials, UVs and textures. This reduces file size and  memory usage, which can help improve rendering performance.",
     "exposed_options" : [
         {
             "name": "Face Target",
-            "description" : "The target amount of faces (triangles), default is 150,000 triangles. RapidPipeline will attempt to get as close as possible to the chosen value, though sometimes a mesh may require a slightly different final triangle count to preserve surface continuity.",
+            "description" : "The target amount of faces (triangles), default is 150,000 triangles.",
+            "description_long" : "The target amount of faces (triangles), default is 150,000 triangles. RapidPipeline will attempt to get as close as possible to the chosen value, though sometimes a mesh may require a slightly different final triangle count to preserve surface continuity.",
             "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.target.faces.value"
         },
         {
             "name": "Deviation Percentage",
-            "description" : "Target percentage of deviation relative to the original mesh. Smaller values tend to cause higher triangle counts. <br/>Works in conjunction with face target as a cap. Depending on the deviation, the final face count can be lower or equal to the face count. <br/>We recommend a percentage of 0.05% or less for complex highly detailed 3D assets, to achieve a reasonably small deviation. For a medium deviation from the input, we recommend a percentage around 0.3%.",
+            "description" : "Target percentage of deviation relative to the original mesh. Smaller values tend to cause higher triangle counts.",
+            "description_long" : "Target percentage of deviation relative to the original mesh. Smaller values tend to cause higher triangle counts. <br/>Works in conjunction with face target as a cap. Depending on the deviation, the final face count can be lower or equal to the face count. <br/>We recommend a percentage of 0.05% or less for complex highly detailed 3D assets, to achieve a reasonably small deviation. For a medium deviation from the input, we recommend a percentage around 0.3%.",
             "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.target.deviation.percentage"
         },
         {
             "name": "Size on Screen Target",
-            "description" : "Calculates optimal mesh and texture resolution for a given display size on screen in pixel. Default is 0 (=off). <br/>It utilizes mesh deviation and a pixel per unit metric in order to calculate the optimal mesh and texture resolution for a given display size on screen in pixels. The pixel target is limited to one value, which is used for width and height of the given size on screen. <br/>This method is optional and can work standalone or in conjunction with other targets. ",
+            "description" : "Calculates optimal mesh and texture resolution for a given display size on screen in pixel.",
+            "description_long" : "Calculates optimal mesh and texture resolution for a given display size on screen in pixel. Default is 0 (=off). <br/>It utilizes mesh deviation and a pixel per unit metric in order to calculate the optimal mesh and texture resolution for a given display size on screen in pixels. The pixel target is limited to one value, which is used for width and height of the given size on screen. <br/>This method is optional and can work standalone or in conjunction with other targets. ",
             "path": "modifier.screensize.pixelTarget"
         },
         {
             "name": "Preserve Mesh Normals",
-            "description" : "Preserves vertex normals during decimation, rather than recalculating normals after merging vertices. <br/>Disabled by default, since this acts as a constraint on the decimation and thus the desired face target might not be reached.",
+            "description" : "Preserves vertex normals during decimation, rather than recalculating normals after merging vertices.",
+            "description_long" : "Preserves vertex normals during decimation, rather than recalculating normals after merging vertices. <br/>Disabled by default, since this acts as a constraint on the decimation and thus the desired face target might not be reached.",
             "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.preserveNormals"
         },
         {
             "name": "Preserve Topology",
-            "description" : "Preserves topological features like holes during decimation. <br/>Disabled by default, since this acts as a constraint on the decimation and thus the desired face target might not be reached. <br/>In most cases it is recommended to decimate meshes without attempting to preserve the exact topology constraints from the input shapes. This allows the simplification algorithm to remove small holes or handles, for example, when creating a low-triangle approximation. <br/>However for some applications and input models, it may be desired to better preserve the exact topology of the input shape. Preserve Topology applies limits on decimation that holes should never be closed, handles and different surface parts should never be merged, and geometric details like fine strands should be preserved.",
+            "description" : "Preserves topological features like holes during decimation.",
+            "description_long" : "Preserves topological features like holes during decimation. <br/>Disabled by default, since this acts as a constraint on the decimation and thus the desired face target might not be reached. <br/>In most cases it is recommended to decimate meshes without attempting to preserve the exact topology constraints from the input shapes. This allows the simplification algorithm to remove small holes or handles, for example, when creating a low-triangle approximation. <br/>However for some applications and input models, it may be desired to better preserve the exact topology of the input shape. Preserve Topology applies limits on decimation that holes should never be closed, handles and different surface parts should never be merged, and geometric details like fine strands should be preserved.",
             "path": "optimize.3dModelOptimizationMethod.meshAndMaterialOptimization.decimator.preserveTopology"
         }
     ]

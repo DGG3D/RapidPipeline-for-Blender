@@ -1,5 +1,10 @@
 from typing import List
-from PySide6 import QtWidgets, QtCore
+try:
+    from PySide6 import QtWidgets
+    PYSIDE_VERSION = 6
+except ImportError:
+    from PySide2 import QtWidgets
+    PYSIDE_VERSION = 2
 
 from magic_actions import utils as action_utils
 from pyside_common import utils as pyside_utils
@@ -82,7 +87,11 @@ class ImportDialog(QtWidgets.QDialog):
             self._clicked_btn = 0
         else:
             print(f"Current Widget Height: {self.actions_container.stacked_widget.size().height()}")
-            super().exec()
+            if PYSIDE_VERSION == 6:
+                super().exec()
+            else:
+                super().exec_()
+
         return self._clicked_btn
 
 class ExportDialog(ImportDialog):

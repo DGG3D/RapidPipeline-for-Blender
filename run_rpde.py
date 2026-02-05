@@ -26,13 +26,12 @@ the GNU GPL-3.0 license. See the RapidPipeline 3D Processor EULA file (under
 rpde/EULA_RapidPipelineEngine.rtf after installation, or during the install
 process) for further information.
 """
-
-import base64
 import functools
-import hashlib
 import os
 import re
+import shutil
 import subprocess
+from pathlib import Path
 
 try:
     import tomllib
@@ -40,10 +39,12 @@ except ModuleNotFoundError:
     pass
 
 import traceback
+from typing import Any
 
 import bpy  # type: ignore
 
 from .gui_commons import ProcessorPlugin
+from .ProcessorPluginsCommon.magic_actions.utils import getCommandSignature, loadJSON, removeSettingFromPath, saveJSON
 from .ui_utils import deselect_all
 
 nodes = []
@@ -52,14 +53,30 @@ cmd_command = []
 
 class RunPipeline:
     @staticmethod
-    def runPipeline(processor_input_file:str, rpde_config:str, output_folder:str, copied_nodes:list) -> None:
+    def runPipeline(processor_input_file:str,
+                    rpde_config:str,
+                    output_folder:str,
+                    copied_nodes:list,
+                    is_export:bool=False) -> None:
         """
         Disables elements, and starts RapidPipeline process with the current UI settings.
         A file with the current settings is exported and validated.
         """
-
         # exports model to predefined file location
         input_file = processor_input_file
+
+        if is_export:
+            # From Joao in ticket: https://app.clickup.com/t/86c4ebkf5?comment=90150143629998
+
+            # a) rename the input file to the name the user wants to use and 
+            config = loadJSON(rpde_config)
+            file_name = config['export'][0]['fileName']
+            input_file = str(Path(processor_input_file).with_stem(file_name))
+            shutil.copyfile(processor_input_file, input_file)
+
+            # b) remove the "file_name" from the presets we generate during execution.
+            removeSettingFromPath(config, "export.fileName", "export.fileName")
+            saveJSON(config, rpde_config)
 
         # process model with RapidPipeline
         os.chdir(os.path.dirname(ProcessorPlugin.getRPDEPath()))
@@ -72,8 +89,7 @@ class RunPipeline:
             "-o", output_folder,
             "--run"]
 
-        hash_object = hashlib.sha1(str.encode(''.join(pipeline_cmd)))
-        h = base64.b64encode(hash_object.digest()).decode()
+        signature = getCommandSignature(pipeline_cmd[0], pipeline_cmd[1:])
         dirname = os.path.dirname(__file__)
         try:
             blender_manifest = os.path.join(dirname, 'blender_manifest.toml')
@@ -88,7 +104,7 @@ class RunPipeline:
                 match = re.search(r'^version\s*=\s*"([^"]+)"', manifest_text, re.MULTILINE)
                 blender_plugin_info = f"bl_{match.group(1)}"
 
-        pipeline_cmd += ['--signature', h, blender_plugin_info]
+        pipeline_cmd += ['--signature', signature, blender_plugin_info]
 
         global cmd_command
         cmd_command = pipeline_cmd
@@ -116,7 +132,7 @@ class ModalTimerOperator(bpy.types.Operator):
         bpy.ops.processor.run()
 
     @staticmethod
-    def _non_blocking_readlines(f, chunk=64):
+    def _non_blocking_readlines(f:Any, chunk:int=64):
         """
         Iterate over lines, yielding b'' when nothings left
         or when new data is not yet available.
@@ -176,7 +192,7 @@ class ModalTimerOperator(bpy.types.Operator):
                 output_type = report_type
         return (output_text, error_text, output_type)
 
-    def _wm_enter(self, context):
+    def _wm_enter(self, context:bpy.types.Context):
         wm = context.window_manager
         window = context.window
         bpy.types.Scene.rpde_output = ""
@@ -186,7 +202,7 @@ class ModalTimerOperator(bpy.types.Operator):
         self._timer = wm.event_timer_add(0.1, window=window)
         context.window.cursor_set('WAIT')
 
-    def _wm_exit(self, context):
+    def _wm_exit(self, context:bpy.types.Context):
         wm = context.window_manager
         window = context.window
 
@@ -195,6 +211,10 @@ class ModalTimerOperator(bpy.types.Operator):
         window.cursor_set('DEFAULT')
 
     def modal(self, context:bpy.types.Context, event:bpy.types.Event) -> set[str]:
+        def add_to_processor_log(processor_log:Any, message:str):
+            processor_log.items.add().name = message
+            processor_log.RPDE_message = len(processor_log.items) - 1
+
         rpde_processor_log = bpy.context.scene.rpde_processor_log
         try:
             if event.type == 'TIMER':
@@ -233,14 +253,12 @@ class ModalTimerOperator(bpy.types.Operator):
                             if not suppress_msg:
                                 bpy.types.Scene.rpde_output += "\n"
                                 bpy.types.Scene.rpde_output += rpde_output
-                                rpde_processor_log.items.add().name = rpde_output
-                                rpde_processor_log.RPDE_message = len(rpde_processor_log.items) - 1
+                                add_to_processor_log(rpde_processor_log, rpde_output)
                                 self.value = rpde_output
                         if context.area:
                             context.area.tag_redraw()
                     if rpde_error and len(rpde_error) > 1:
-                        rpde_processor_log.items.add().name = rpde_error
-                        rpde_processor_log.RPDE_message = len(rpde_processor_log.items) - 1
+                        add_to_processor_log(rpde_processor_log, rpde_error)
                         if context.area:
                             context.area.tag_redraw()
 
@@ -263,20 +281,18 @@ class ModalTimerOperator(bpy.types.Operator):
                                 self.full_log += (rpde_error)
                             bpy.types.Scene.rpde_error = True
                             bpy.types.Scene.rpde_output = self.full_log
-                            rpde_processor_log.items.add().name = rpde_error
-                            rpde_processor_log.RPDE_message = len(rpde_processor_log.items) - 1
+                            add_to_processor_log(rpde_processor_log, rpde_error)
                             if context.area:
                                 context.area.tag_redraw()
-                            rpde_processor_log.items.add().name = "RPDE interrupted!"
-                            rpde_processor_log.RPDE_message = len(rpde_processor_log.items) - 1
+                            add_to_processor_log(rpde_processor_log, "RPDE interrupted!")
                             self._wm_exit(context)
                             return {'FINISHED'}
                         # rpde successful:
                         else:
                             print("close session")
-                            bpy.app.timers.register(functools.partial(self.close_rpde_session, context), first_interval=1)
-                            rpde_processor_log.items.add().name = "RPDE finished successfully."
-                            rpde_processor_log.RPDE_message = len(rpde_processor_log.items) - 1
+                            bpy.app.timers.register(
+                                functools.partial(self.close_rpde_session, context), first_interval=1)
+                            add_to_processor_log(rpde_processor_log, "RPDE finished successfully.")
                             self._wm_exit(context)
                             return {'FINISHED'}
                 else:

@@ -1,0 +1,36 @@
+{
+    "uid"         : "MA2025052913",
+    "min_engine_version" : [7,5,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 11, "3ds Max" : 11, "blender" : 11, "UnrealEngine" : 11 },
+    "name"        : "Generate UV Atlas",
+    "button_name" : "Generate UV Atlas",
+    "read_more" : "https://docs.rapidpipeline.com/docs/componentDocs/actions/3d-processor-actions#--generate-uv-atlas",
+    "explanation_long" : "Generates a unified UV atlas for the selected parts. Materials are replaced with a Default Material and an optional checker texture can be added. UVs are non-overlapping and global. Warning: This overrides existing UV sets and might therefore lead to issues with existing Texture Sets.",
+    "explanation" : "Generates a unified UV atlas for the selected parts. Materials are replaced with a Default Material and an optional checker texture can be added. UVs are non-overlapping and global.",
+    "exposed_options" : [
+        {
+            "name": "Merge Meshes per Material",
+            "description": "Merge mesh nodes that share the same material, according to settings.",
+            "description_long": "Choose a method to merge mesh nodes that share the same material. Note that original node names cannot be preserved for any merged meshes.<br/>***none***: No meshes are merged. The scene graph will remain the same as in the input. This mode produces the highest number of draw calls, but it preserves all nodes and any instancing if present. <br/>***full***: All meshes are merged into a single mesh node. Per-triangle material assignments are preserved, and the output will have the same number of materials as the input. <br/>***byOpacity***: Meshes all non-transparent meshes together into a single mesh, and keeps all the transparent meshes separate. Transparent meshes are not combined together, because often this improves depth sorting in real-time rendering. For the resulting opaque mesh, the original per-face material assignments preserved. <br/>***byMaterial***: Meshes using the same material will be combined together. This can change the number of meshes, but will keep the same number of materials as the input.<br/>***auto***: Let RapidPipeline decide. At the moment, this is the same as using *byOpacity*. <br/><br/>![atlas-per-material](import/00-cad_import/atlas-per-material.webp)",
+            "path": "sceneGraphFlattening.method"
+        },
+        {
+            "name": "UV Creation Method",
+            "description": "Method used to define how UVs are unwrapped and packed. Default is packedCubeUVs. We recommend isometric method for more organic meshes and packedCubeUVs for hard surface meshes.",
+            "description_long": "Choose a method to define how UVs are unwrapped and packed. Default is packedCubeUVs. We recommend isometric method for more organic meshes and packedCubeUVs for hard surface meshes. The other methods are experimental.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.method"
+        },
+        {
+            "name": "Atlas Mode",
+            "description" : "How many materials are created, each with its own UV atlas and set of PBR textures (color, normal, etc.).",
+            "description_long" : "How many materials are created, each with its own UV atlas and set of PBR textures (color, normal, etc.). <br/> - **single**: Bake a single material for the whole asset. <br/> - **separateAlpha**: Bake two materials, one for parts using alpha, and the other without alpha. This reduces texture file size because the non-transparent material doesn't need an alpha channel. If no alpha was present in the input, then only one material is baked. <br/> - **separateNormals**: Bake two materials, one for parts with textures already, and the other for untextured parts. For the untextured parts, this bakes normal maps without having to bake any other PBR textures. <br/> - **separateAlphaNormals**: This combines the features of both separateAlpha and separateNormals. <br/> - **separateMaterials**: Bake the same number of materials as the input. <br/>By default atlases are separated by opacity (separateAlpha).",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.atlasMode"
+        },
+        {
+            "name": "Multiple Atlas Factor",
+            "description" : "Increases the number of texture sets.",
+            "description_long" : "Increases the number of texture sets. Each material atlas is divided by this value, so a value of 2 means each atlas becomes two atlases. <br/>This can help improve texture resolution in the output. This can be paired with a lower value for 'Texture Baking Resolution' as a good alternative to using fewer atlases with a higher texture resolution (e.g. two 2048s vs. one 4096).",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialMerger.materialRegenerator.uvAtlasGenerator.atlasFactor"
+        }
+]
+}

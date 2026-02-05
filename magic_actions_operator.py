@@ -32,7 +32,9 @@ import webbrowser
 
 import bpy  # type: ignore
 
-from .json_utils import JSonUtils
+from .main import MainData
+from .ProcessorPluginsCommon.magic_actions.utils import MagicAction as CommonMagicAction
+from .ProcessorPluginsCommon.magic_actions.utils import import_magic_actions
 from .scene_utils import blend_scene_getattr, get_ui_element
 from .settings_operator import resetSettingsToDefault, setValue
 
@@ -53,13 +55,7 @@ class MagicActionOption():
     def get_option_ui_element(self):
         get_ui_element(self.option_path)
 
-class MagicAction():
-    action_name = ""
-    action_description = ""
-    path = ""
-    action_config = {}
-    action_image = ""
-    action_version = ""
+class MagicAction(CommonMagicAction):
     ui_prio = 0
     action_options:list[MagicActionOption] = []
     action_link:str = ""
@@ -68,26 +64,20 @@ class MagicAction():
                  name:str,
                  description:str,
                  action_config:dict,
-                 path:str,
+                 action_meta:dict,
                  version:str,
                  action_image:str = "",
-                 ui_prio:int = 0,
-                 action_link:str = ""):
-        self.action_name = name
-        self.action_description = description
-        self.action_config = action_config
-        self.path = path
-        self.action_image = action_image
-        self.action_version = version
-        self.ui_prio = ui_prio
+                 icon_dark:str = ""):
+        super().__init__(name=name, version=version, description=description, action_config=action_config,
+                         action_meta=action_meta, action_video="", action_gif=action_image, icon_dark=icon_dark, 
+                         icon_light="")
+        self.ui_prio = self.ui_prio_hints['blender']
         self.action_options = self.set_options()
-        self.action_link = action_link
+        self.action_link = self.meta.get("read_more", "")
 
     def set_options(self) -> list[MagicActionOption]:
         action_options = []
-        magic_action_meta_path = os.path.join(self.path, "meta.json")
-        magic_action_meta = JSonUtils.loadJSON(magic_action_meta_path)
-        exposed_options:list[dict] = magic_action_meta["exposed_options"]
+        exposed_options:list[dict] = self.meta["exposed_options"]
         for option in exposed_options:
             if 'path' in option:
                 option_path:str = option["path"]
@@ -100,37 +90,26 @@ class MagicAction():
                 action_options.append(option)
         return action_options
 
+def set_magic_actions(type:str, version_str) -> list[MagicAction]:
+    commons_actions:list[CommonMagicAction] = [] #import_magic_actions(dirname)[global_magic_action_version][type]
+    main_data = MainData()
+    import_actions, process_actions, export_actions = main_data.getActionsByVersion(version_str)
+    if type == 'processing':
+        commons_actions:list[CommonMagicAction] = process_actions
+    if type == 'import':
+        commons_actions:list[CommonMagicAction] = import_actions
+    if type == 'export':
+        commons_actions:list[CommonMagicAction] = export_actions
 
+    blender_actions:list[MagicAction] = []
+    for commons_action in commons_actions:
+        path = commons_action.gif_path.split(r"\video.gif")[0]
+        image_path = os.path.join(path, "image.png")
+        blender_action = MagicAction(commons_action.name, commons_action.description, commons_action.config,
+                                     commons_action.meta, commons_action.version, image_path, commons_action.icon_dark_path)
+        blender_actions.append(blender_action)
 
-def set_magic_actions(type:str) -> list[MagicAction]:
-    magic_actions:list[MagicAction] = []
-    dirname = os.path.dirname(__file__)
-    magic_action_folder = os.path.join(dirname, 'magic-actions', 'actions', global_magic_action_version, type)
-
-    if os.path.isdir(magic_action_folder):
-        for magic_action in os.listdir(magic_action_folder):
-            if os.path.isdir(os.path.join(magic_action_folder, magic_action)):
-                magic_action_meta_path = os.path.join(magic_action_folder, magic_action, "meta.json")
-                magic_action_image_path = os.path.join(magic_action_folder, magic_action, "image.png")
-                magic_action_config_path = os.path.join(magic_action_folder, magic_action, "rpd_config.json")
-                magic_action_meta = JSonUtils.loadJSON(magic_action_meta_path)
-                magic_action_config = JSonUtils.loadJSON(magic_action_config_path)
-                name = magic_action_meta.get("button_name", magic_action_meta.get("name", ""))
-                description = magic_action_meta.get("explanation", "")
-                # do not displac magic actions that include cad import
-                if "is_import_action" in magic_action_meta and magic_action_meta["is_import_action"]:
-                    continue
-                action = MagicAction(
-                    name,
-                    description,
-                    magic_action_config,
-                    os.path.join(magic_action_folder, magic_action),
-                    global_magic_action_version,
-                    action_image=magic_action_image_path,
-                    ui_prio=magic_action_meta.get("ui_prio_hints", {}).get("blender", 0),
-                    action_link=magic_action_meta.get("read_more", ""))
-                magic_actions.append(action)
-    return magic_actions
+    return blender_actions
 
 # initialize the newest version of magic actions:
 dirname = os.path.dirname(__file__)
@@ -138,20 +117,26 @@ action_versions = os.listdir(os.path.join(dirname, 'magic-actions', 'actions'))
 action_versions.sort()
 global_magic_action_version = action_versions[-1]
 
-global_magic_actions = set_magic_actions("processing")
-global_import_actions = set_magic_actions("import")
-global_export_actions = set_magic_actions("export")
+global_magic_actions = []
+global_import_actions = []
+global_export_actions = []
 
-def set_version(version:str):
+for version in action_versions:
+    global_magic_actions.extend(set_magic_actions("processing", version))
+    global_import_actions = (set_magic_actions("import", action_versions[-1]))
+    global_export_actions = (set_magic_actions("export", action_versions[-1]))
+
+def set_version(version:str=None):
     global global_magic_action_version
     global global_magic_actions
     global global_import_actions
     global global_export_actions
-    global_magic_action_version = version
+    if version:
+        global_magic_action_version = version
     # set magic actions for that version
-    global_magic_actions = set_magic_actions("processing")
-    global_import_actions = set_magic_actions("import")
-    global_export_actions = set_magic_actions("export")
+    global_magic_actions = set_magic_actions("processing", global_magic_action_version)
+    global_import_actions = set_magic_actions("import", global_magic_action_version)
+    global_export_actions = set_magic_actions("export", global_magic_action_version)
 
 def get_all_actions() -> list[MagicAction]:
     output = []
@@ -169,10 +154,13 @@ def get_import_actions() -> list[MagicAction]:
 def get_export_actions() -> list[MagicAction]:
     return get_magic_actions_sorted(global_export_actions)
 
-def get_magic_actions_sorted(global_magic_action:list) -> list[MagicAction]:
-    magic_action_sorted = list(filter(lambda x: x.ui_prio != -1, global_magic_action))
-    magic_action_sorted.sort(key=lambda x: x.ui_prio, reverse=False)
-    return magic_action_sorted
+def get_magic_actions_sorted(action:list) -> list[MagicAction]:
+#    print("get magic action soted")
+#    print(main_data.process_actions)
+#    magic_action_sorted = list(filter(lambda x: x.ui_prio != -1, global_magic_action))
+#    magic_action_sorted.sort(key=lambda x: x.ui_prio, reverse=False)
+#    print(f"there after sort: {magic_action_sorted}")
+    return action #NOTE actions from common are already sorted #TODO delete this function
 
 def get_version() -> str:
     return global_magic_action_version
@@ -189,22 +177,22 @@ class MagicActionOperator(bpy.types.Operator):
         bpy.types.Scene.rpde_selected_action = self.magic_action_str
 
         magic_action:MagicAction = next((action for action in get_all_actions()
-                                                  if action.action_name == self.magic_action_str
-                                                  and action.action_version == get_version()), None)
+                                                  if action.name == self.magic_action_str
+                                                  and action.version == get_version()), None)
 
         # reset settings when magic action is selected
         resetSettingsToDefault(context)
 
         # sets all values of config and also activates all parents and sets oneofs for the options
-        setValue(context, magic_action.action_config)
+        setValue(context, magic_action.config)
 
         self.toggle_action_options(context)
         return {'FINISHED'}
 
     def toggle_action_options(self, context:bpy.types.Context):
         magic_action:MagicAction = next((action for action in get_all_actions()
-                                    if action.action_name == self.magic_action_str
-                                    and action.action_version == get_version()), None)
+                                    if action.name == self.magic_action_str
+                                    and action.version == get_version()), None)
         for option in magic_action.action_options:
             if option.option_toggled is not None:
                 attribute_env, attribute = blend_scene_getattr(

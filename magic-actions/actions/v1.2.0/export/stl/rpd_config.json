@@ -1,0 +1,17 @@
+{
+  "export": [
+    {
+      "fileName": "",
+      "preserveTextureFilenames": false,
+      "textureMapFilePrefix": "",
+      "reencodeTextures": "auto",
+      "discard": {
+        "unusedUVs": false,
+        "emptyNodes": false
+      },
+      "format": {
+        "stl": {}
+      }
+    }
+  ]
+}

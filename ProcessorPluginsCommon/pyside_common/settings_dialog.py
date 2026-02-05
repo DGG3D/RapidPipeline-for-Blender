@@ -1,6 +1,11 @@
 import os
 from typing import List, Callable, Any
-from PySide6 import QtWidgets
+try:
+    from PySide6 import QtWidgets
+    PYSIDE_VERSION = 6
+except ImportError:
+    from PySide2 import QtWidgets
+    PYSIDE_VERSION = 2
 
 from pyside_common import utils as pyside_utils
 from magic_actions import utils as action_utils

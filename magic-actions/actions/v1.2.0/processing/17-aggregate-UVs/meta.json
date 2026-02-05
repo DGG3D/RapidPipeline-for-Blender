@@ -1,0 +1,24 @@
+{
+    "uid"         : "MA2025052917",
+    "min_engine_version" : [7,5,0],
+    "ui_prio_hints" : { "Substance" : -1, "Maya" : 13, "3ds Max" : 13, "blender" : 13, "UnrealEngine" : 13 },
+    "name"        : "Aggregate UVs",
+    "button_name" : "Aggregate UVs",
+    "read_more" : "https://docs.rapidpipeline.com/docs/componentDocs/actions/3d-processor-actions#--aggregate-uvs",
+    "explanation_long" : "UVs and textures are aggregated from different materials into a single atlas when possible, by appending the original UVs side-by-side. Transparent parts are processed separately.",
+    "explanation" : "UVs and textures are aggregated from different materials into a single atlas when possible, by appending the original UVs side-by-side.",
+    "exposed_options" : [
+        {
+            "name": "Allow Rectangular Atlas",
+            "description" : "Generates rectangular powers-of-two textures when beneficial for auto-sized textures.",
+            "description_long" : "Generates rectangular powers-of-two textures when beneficial for auto-sized textures. This can reduce waste of empty areas in textures, which helps improve file sizes and texture memory usage.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialUVAggregator.allowRectangularAtlases"
+        },
+        {
+            "name": "Re-bake normal maps",
+            "description" : "Re-bakes normal maps when preserving UVs, even if UV overlaps are detected.",
+            "description_long" : "Re-bakes normal maps when preserving UVs, even if UV overlaps are detected.",
+            "path": "optimize.3dModelOptimizationMethod.onlyMaterial.materialUVAggregator.forceNormalRebaking"
+        }
+]
+}

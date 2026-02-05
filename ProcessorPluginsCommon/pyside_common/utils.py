@@ -1,6 +1,11 @@
 import os
 from typing import Callable, List
-from PySide6 import QtCore, QtWidgets, QtGui
+try:
+    from PySide6 import QtWidgets, QtCore, QtGui
+    PYSIDE_VERSION = 6
+except ImportError:
+    from PySide2 import QtWidgets, QtCore, QtGui
+    PYSIDE_VERSION = 2
 
 COMMONS_ROOT = os.path.dirname(os.path.dirname(__file__))
 ICONS_ROOT = os.path.join(COMMONS_ROOT, "assets", "icons")
